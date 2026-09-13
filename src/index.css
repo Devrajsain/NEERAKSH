@@ -27,6 +27,28 @@
   margin: 0 !important;
 }
 
+/* Custom styling for Leaflet zoom control */
+.leaflet-bottom.leaflet-right .leaflet-control-zoom {
+  border: 1px solid #E2E5EA !important;
+  box-shadow: 0 4px 12px rgba(11, 37, 69, 0.12) !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+  margin-right: 16px !important;
+  margin-bottom: 16px !important;
+}
+
+.leaflet-control-zoom a {
+  background-color: #FFFFFF !important;
+  color: #0A2342 !important;
+  border-bottom: 1px solid #E2E5EA !important;
+  transition: all 0.15s ease;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: #F7F8FA !important;
+  color: #0F3B6E !important;
+}
+
 /* Custom scrollbars for dense gov panels */
 ::-webkit-scrollbar {
   width: 6px;
@@ -41,4 +63,87 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #1A3C6E;
+}
+
+/* Forensic Upgrades */
+.origin-glow { filter: drop-shadow(0 0 12px rgba(255, 0, 0, 0.9)); }
+
+.origin-heatmap {
+  background: radial-gradient(circle, rgba(239,68,68,0.8) 0%, rgba(239,68,68,0.2) 50%, rgba(239,68,68,0) 80%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Compact pill tooltips for forensic nodes */
+.forensic-tooltip {
+  background: #0F3B6E !important;
+  color: white !important;
+  border: 1px solid #0A2342 !important;
+  border-radius: 12px !important;
+  padding: 3px 8px !important;
+  font-family: 'Inter', monospace !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+  text-shadow: none !important;
+  white-space: nowrap;
+}
+.forensic-tooltip::before {
+  border-top-color: #0F3B6E !important;
+}
+
+.forensic-tooltip-origin {
+  background: #D94B4B !important;
+  color: white !important;
+  border: 1px solid #7F1D1D !important;
+  border-radius: 12px !important;
+  padding: 3px 8px !important;
+  font-family: 'Inter', monospace !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+}
+.forensic-tooltip-origin::before {
+  border-top-color: #D94B4B !important;
+}
+
+/* Animated flow lines */
+.animate-dash {
+  stroke-dasharray: 6, 8;
+  animation: dash-flow 1s linear infinite;
+}
+
+@keyframes dash-flow {
+  from {
+    stroke-dashoffset: 14;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Pulsing effect for connection line */
+.connection-line {
+  stroke-dasharray: 4, 6;
+  animation: connection-flow 0.5s linear infinite;
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.8));
+}
+@keyframes connection-flow {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Vessel directional SVG container */
+.vessel-svg-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.2s ease;
+  transform-origin: center center;
 }

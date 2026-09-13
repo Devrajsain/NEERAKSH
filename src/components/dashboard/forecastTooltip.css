@@ -1,0 +1,110 @@
+/* ─── Forecast Horizon Tooltip ─────────────────────────────────────── */
+.fc-tooltip {
+  pointer-events: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.fc-tooltip .leaflet-popup-content-wrapper {
+  background: transparent;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.fc-tooltip .leaflet-popup-content {
+  margin: 0;
+  line-height: 1;
+}
+
+.fc-tooltip .leaflet-popup-tip-container {
+  display: none;
+}
+
+/* The actual tooltip card */
+.fc-tooltip-card {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-left: 3px solid #1D4ED8;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(15, 30, 60, 0.18), 0 1px 4px rgba(15, 30, 60, 0.1);
+  padding: 8px 10px;
+  min-width: 168px;
+  font-family: 'Inter', 'Noto Sans', system-ui, sans-serif;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  user-select: none;
+  pointer-events: none;
+}
+
+.fc-tooltip-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fc-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.fc-tooltip-badge {
+  background: #1D4ED8;
+  color: #FFFFFF;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'Inter', monospace;
+  flex-shrink: 0;
+}
+
+.fc-tooltip-source {
+  color: #64748B;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.fc-tooltip-rows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2.5px 8px;
+  align-items: baseline;
+}
+
+.fc-tooltip-label {
+  color: #64748B;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.fc-tooltip-value {
+  color: #0F172A;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Inter', monospace;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fc-tooltip-value.accent {
+  color: #1D4ED8;
+}
+
+.fc-tooltip-divider {
+  height: 1px;
+  background: #F1F5F9;
+  margin: 4px 0;
+  grid-column: 1 / -1;
+}

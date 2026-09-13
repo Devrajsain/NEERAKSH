@@ -37,28 +37,16 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenU
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => onNavigate('home')}
           >
-            {/* Emblem Placeholder */}
-            <div className="w-12 h-12 rounded-full bg-navy-800 flex items-center justify-center border-2 border-navy-700 p-1 text-amber-400 shadow-sm">
-              <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-                {/* Simplified Ashoka Pillar Chakra Symbol */}
-                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="4"/>
-                <circle cx="50" cy="50" r="12" fill="none" stroke="currentColor" strokeWidth="3"/>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <line 
-                    key={i} 
-                    x1="50" y1="50" 
-                    x2={50 + 44 * Math.cos((i * Math.PI) / 6)} 
-                    y2={50 + 44 * Math.sin((i * Math.PI) / 6)} 
-                    stroke="currentColor" 
-                    strokeWidth="2"
-                  />
-                ))}
-              </svg>
-            </div>
+            {/* NEERAKSH Logo */}
+            <img
+              src="/neeraksh_logo.jpg"
+              alt="NEERAKSH"
+              className="w-12 h-12 rounded-full object-cover border-2 border-navy-700 shadow-sm group-hover:opacity-90 transition-opacity"
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-2xl font-bold tracking-tight text-navy-800 font-sans">
-                  SlickTrace
+                  NEERAKSH
                 </span>
                 <span className="text-[10px] font-semibold uppercase tracking-wider bg-navy-800 text-white px-2 py-0.5 rounded-gov border border-navy-700">
                   GOV PORTAL

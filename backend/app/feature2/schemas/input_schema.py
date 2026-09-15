@@ -3,7 +3,7 @@ Input data models representing SAR slick detections emitted by Feature 1.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -54,6 +54,10 @@ class SlickDetectionInput(BaseModel):
     observation_time: datetime = Field(
         ...,
         description="UTC observation timestamp T0 of the SAR satellite acquisition."
+    )
+    observation_time_source: Optional[str] = Field(
+        default="sentinel_metadata",
+        description="Provenance source of the observation timestamp ('sentinel_metadata', 'explicit_input', 'test_fixture')."
     )
     area_sq_km: float = Field(
         ...,

@@ -9,6 +9,7 @@ import { WhySlickTrace } from './components/WhySlickTrace';
 import { Footer } from './components/Footer';
 import { WorkflowUploadModal } from './components/WorkflowUploadModal';
 import { Dashboard } from './components/Dashboard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'workflow'>('home');
@@ -27,7 +28,7 @@ export const App: React.FC = () => {
 
   if (currentView === 'dashboard') {
     return (
-      <>
+      <ErrorBoundary fallbackTitle="Dashboard Error Encountered">
         <Dashboard
           onNavigate={handleNavigate}
           onOpenUpload={() => setIsUploadModalOpen(true)}
@@ -38,7 +39,7 @@ export const App: React.FC = () => {
           onClose={() => setIsUploadModalOpen(false)}
           onSelectCase={handleSelectCaseAndLaunch}
         />
-      </>
+      </ErrorBoundary>
     );
   }
 
@@ -101,11 +102,13 @@ export const App: React.FC = () => {
       />
 
       {/* Interactive Workflow Modal */}
-      <WorkflowUploadModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-        onSelectCase={handleSelectCaseAndLaunch}
-      />
+      <ErrorBoundary fallbackTitle="Workflow Pipeline Error Encountered">
+        <WorkflowUploadModal
+          isOpen={isUploadModalOpen}
+          onClose={() => setIsUploadModalOpen(false)}
+          onSelectCase={handleSelectCaseAndLaunch}
+        />
+      </ErrorBoundary>
     </div>
   );
 };

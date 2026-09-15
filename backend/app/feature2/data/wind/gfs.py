@@ -110,6 +110,10 @@ class GFSWindProvider(ForecastWindProvider):
         self._active_filepath: Optional[str] = None
         self._source_type: str = "uninitialized"
         self._cache_status: str = "none"
+        self._requested_bbox: Optional[Dict[str, float]] = None
+        self._requested_time: Optional[Dict[str, str]] = None
+        self._spatially_matched: Optional[bool] = None
+        self._temporally_matched: Optional[bool] = None
 
         # Fail-closed check: In production mode, local fixture paths are strictly forbidden unless explicit replay mode is enabled
         if (
@@ -143,6 +147,8 @@ class GFSWindProvider(ForecastWindProvider):
         """Returns provenance metadata for the active GFS forecast wind dataset."""
         return {
             "source": "NOAA GFS",
+            "model_source": "NOAA GFS",
+            "access_provider": "Open-Meteo GFS API",
             "product": "gfs_0p25_forecast" if self.mode == "forecast" else "gfs_0p25_operational",
             "variables": [self.config.u_var, self.config.v_var],
             "units": "m/s",
@@ -150,6 +156,13 @@ class GFSWindProvider(ForecastWindProvider):
             "source_type": self._source_type,
             "cache_status": self._cache_status,
             "active_filepath": self._active_filepath,
+            "spatial_resolution": "0.25 degree (~28 km)",
+            "temporal_resolution": "1 hour (hourly forecast; interpolated to simulation steps)",
+            "used_in_numerical_simulation": True,
+            "spatially_matched": self._spatially_matched if self._spatially_matched is not None else (True if self.reader else False),
+            "temporally_matched": self._temporally_matched if self._temporally_matched is not None else (True if self.reader else False),
+            "requested_spatial_domain": self._requested_bbox,
+            "requested_temporal_domain": self._requested_time,
             "spatial_domain": {
                 "min_lat": self.reader.min_lat if self.reader else None,
                 "max_lat": self.reader.max_lat if self.reader else None,
@@ -161,6 +174,26 @@ class GFSWindProvider(ForecastWindProvider):
                 "end": self.reader.max_time.isoformat() if self.reader else None,
             }
         }
+
+    def _verify_matching(self, min_lat: float, max_lat: float, min_lon: float, max_lon: float, start_time: datetime, end_time: datetime) -> None:
+        """Verifies actual loaded NetCDF spatial and temporal coverage against requested bounds."""
+        if self.reader is None:
+            self._spatially_matched = False
+            self._temporally_matched = False
+            return
+
+        tol = 0.26
+        self._spatially_matched = bool(
+            self.reader.min_lat <= min_lat + tol and
+            self.reader.max_lat >= max_lat - tol and
+            self.reader.min_lon <= min_lon + tol and
+            self.reader.max_lon >= max_lon - tol
+        )
+        tol_time = timedelta(hours=1)
+        self._temporally_matched = bool(
+            self.reader.min_time <= start_time + tol_time and
+            self.reader.max_time >= end_time - tol_time
+        )
 
     def _init_reader(self, filepath: str, source_type: str, cache_status: str) -> None:
         """Initializes LocalNetCDFDatasetReader on the given NetCDF file."""
@@ -226,8 +259,12 @@ class GFSWindProvider(ForecastWindProvider):
 
         min_lat, max_lat, min_lon, max_lon, start_time, end_time = extract_query_bounds(window, mode=target_mode)
 
+        self._requested_bbox = {"min_lat": min_lat, "max_lat": max_lat, "min_lon": min_lon, "max_lon": max_lon}
+        self._requested_time = {"start": start_time.isoformat(), "end": end_time.isoformat()}
+
         # Case 1: Active local dataset already loaded
         if self.reader is not None:
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             try:
                 self.reader.validate_domain_coverage(window, mode=target_mode)
                 return True
@@ -238,6 +275,7 @@ class GFSWindProvider(ForecastWindProvider):
         # Case 2: Configured local data path
         if self.data_path and os.path.exists(self.data_path):
             self._init_reader(self.data_path, source_type="local_netcdf", cache_status="direct")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode=target_mode)
             return True
 
@@ -280,6 +318,7 @@ class GFSWindProvider(ForecastWindProvider):
 
         if cached_file:
             self._init_reader(cached_file, source_type="cache", cache_status="hit")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode=target_mode)
             return True
 
@@ -392,6 +431,7 @@ class GFSWindProvider(ForecastWindProvider):
                 _download_action,
             )
             self._init_reader(final_path, source_type="remote_download", cache_status="miss")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode=target_mode)
             return True
 

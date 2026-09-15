@@ -9,6 +9,7 @@ from typing import List, Any, Dict
 
 from app.db import get_db
 from app.models.feature2_result import Feature2Result
+from app.models.case import ForensicCase
 from app.schemas.feature2_result import Feature2ResultResponse, Feature2GeoJSONResponse, OriginResponse, ForecastHorizonResponse
 
 router = APIRouter(prefix="/feature2-results", tags=["Feature 2 Results"])
@@ -19,6 +20,28 @@ def get_feature2_result(case_id: str, db: Session = Depends(get_db)):
     """Returns the stored Feature 2 analysis for a specific case."""
     result = db.query(Feature2Result).filter(Feature2Result.case_id == case_id).first()
     if not result:
+        case_obj = db.query(ForensicCase).filter(ForensicCase.id == case_id).first()
+        if case_obj and case_obj.summary_json and "feature2" in case_obj.summary_json:
+            f2 = case_obj.summary_json.get("feature2") or {}
+            origin = f2.get("origin") or {}
+            drift = case_obj.summary_json.get("drift") or {}
+            return Feature2Result(
+                id=f"f2-{case_id}",
+                case_id=case_id,
+                status=f2.get("status", "SKIPPED"),
+                processing_mode=f2.get("processing_mode", "mock"),
+                origin_latitude=origin.get("origin_latitude"),
+                origin_longitude=origin.get("origin_longitude"),
+                origin_timestamp=origin.get("origin_timestamp"),
+                origin_confidence_score=origin.get("origin_confidence_score"),
+                origin_uncertainty_radius_km=origin.get("origin_uncertainty_radius_km"),
+                release_window_start=origin.get("release_window_start"),
+                release_window_end=origin.get("release_window_end"),
+                forecast_json=f2.get("forecast") or {},
+                geojson_feature_collection=f2.get("geojson") or {},
+                error_message=f2.get("error") or drift.get("error"),
+                created_at=case_obj.created_at if getattr(case_obj, "created_at", None) else None,
+            )
         raise HTTPException(status_code=404, detail=f"No Feature 2 results found for case {case_id}")
     return result
 
@@ -31,6 +54,10 @@ def get_feature2_geojson(case_id: str, db: Session = Depends(get_db)) -> Dict[st
     """
     result = db.query(Feature2Result).filter(Feature2Result.case_id == case_id).first()
     if not result:
+        case_obj = db.query(ForensicCase).filter(ForensicCase.id == case_id).first()
+        if case_obj and case_obj.summary_json and "feature2" in case_obj.summary_json:
+            f2 = case_obj.summary_json.get("feature2") or {}
+            return f2.get("geojson") or {"type": "FeatureCollection", "features": []}
         raise HTTPException(status_code=404, detail=f"No Feature 2 results found for case {case_id}")
 
     if result.geojson_feature_collection:

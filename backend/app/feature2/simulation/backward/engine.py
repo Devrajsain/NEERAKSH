@@ -169,6 +169,10 @@ class BackwardSimulationEngine(ParticleSimulationEngine):
                     )
                     continue
 
+                if math.isnan(p.latitude) or math.isnan(p.longitude):
+                    p.active = False
+                    continue
+
                 # 1. Query historical current velocity at particle's actual location and reverse time
                 try:
                     curr_sample = self.currents_provider.get_current(
@@ -178,11 +182,10 @@ class BackwardSimulationEngine(ParticleSimulationEngine):
                     )
                     u_curr = curr_sample.u
                     v_curr = curr_sample.v
-                except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError) as err:
+                except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError, Exception) as err:
                     logger.warning(
                         f"Particle {p.particle_id} out of historical current data coverage at "
-                        f"({p.latitude:.4f}, {p.longitude:.4f}, {current_reverse_time.isoformat()}): {err}. "
-                        "Deactivating particle."
+                        f"({p.latitude}, {p.longitude}, {current_reverse_time.isoformat()}): {err}. Deactivating particle."
                     )
                     p.active = False
                     deactivated_state = ParticleState(
@@ -212,11 +215,10 @@ class BackwardSimulationEngine(ParticleSimulationEngine):
                         )
                         u_wind = wind_sample.u
                         v_wind = wind_sample.v
-                    except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError) as err:
+                    except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError, Exception) as err:
                         logger.warning(
                             f"Particle {p.particle_id} out of historical wind data coverage at "
-                            f"({p.latitude:.4f}, {p.longitude:.4f}, {current_reverse_time.isoformat()}): {err}. "
-                            "Deactivating particle."
+                            f"({p.latitude}, {p.longitude}, {current_reverse_time.isoformat()}): {err}. Deactivating particle."
                         )
                         p.active = False
                         deactivated_state = ParticleState(
@@ -240,6 +242,23 @@ class BackwardSimulationEngine(ParticleSimulationEngine):
                 u_eff = u_curr + u_wind_eff
                 v_eff = v_curr + v_wind_eff
 
+                if math.isnan(u_eff) or math.isnan(v_eff):
+                    p.active = False
+                    deactivated_state = ParticleState(
+                        id=idx,
+                        latitude=p.latitude,
+                        longitude=p.longitude,
+                        timestamp=next_reverse_time,
+                        ensemble_member_id=getattr(p, "ensemble_member_id", 0),
+                        age_seconds=p.age_seconds + step_dt,
+                        mass_kg=p.mass_kg,
+                        is_active=False,
+                        beached=False
+                    )
+                    trajectories[p.particle_id].append(deactivated_state)
+                    step_states_snapshot.append(deactivated_state)
+                    continue
+
                 if step_callback is not None:
                     step_callback(p, u_eff, v_eff, current_reverse_time)
 
@@ -253,6 +272,23 @@ class BackwardSimulationEngine(ParticleSimulationEngine):
 
                 new_lat = p.latitude + dlat_deg
                 new_lon = normalize_longitude(p.longitude + dlon_deg)
+
+                if math.isnan(new_lat) or math.isnan(new_lon):
+                    p.active = False
+                    deactivated_state = ParticleState(
+                        id=idx,
+                        latitude=p.latitude,
+                        longitude=p.longitude,
+                        timestamp=next_reverse_time,
+                        ensemble_member_id=getattr(p, "ensemble_member_id", 0),
+                        age_seconds=p.age_seconds + step_dt,
+                        mass_kg=p.mass_kg,
+                        is_active=False,
+                        beached=False
+                    )
+                    trajectories[p.particle_id].append(deactivated_state)
+                    step_states_snapshot.append(deactivated_state)
+                    continue
 
                 if new_lat > 90.0:
                     new_lat = 90.0

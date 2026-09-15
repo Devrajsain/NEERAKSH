@@ -8,6 +8,11 @@ import os
 import sys
 from pathlib import Path
 
+# Ensure testing environment during pytest execution
+os.environ["FEATURE2_ENVIRONMENT"] = "testing"
+os.environ["FEATURE2_CURRENTS_PROVIDER"] = "mock"
+os.environ["FEATURE2_WIND_PROVIDER"] = "mock"
+
 # Paths
 backend_dir = Path(__file__).resolve().parent.parent
 app_dir = backend_dir / "app"

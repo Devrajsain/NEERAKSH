@@ -196,10 +196,12 @@ def _parse_single_geojson_feature(feature: Dict[str, Any]) -> SlickDetectionInpu
     )
 
     metadata = {k: v for k, v in props.items() if k not in ("spill_id", "observation_time", "centroid", "area_sq_km", "area_km2", "perimeter_km")}
+    obs_time_source = props.get("observation_time_source") or "sentinel_metadata"
 
     return SlickDetectionInput(
         spill_id=spill_id,
         observation_time=obs_time,
+        observation_time_source=obs_time_source,
         area_sq_km=round(area_km2, 4),
         perimeter_km=round(perim_km, 4),
         centroid=centroid,

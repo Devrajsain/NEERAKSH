@@ -108,13 +108,14 @@ def feature1_to_feature2_geojson(
 
     # 2. Resolve & normalize observation timestamp
     raw_timestamp = (
-        detection_output.get("detection_timestamp") or
+        detection_output.get("acquisition_timestamp") or
         detection_output.get("observation_time") or
+        detection_output.get("detection_timestamp") or
         detection_output.get("timestamp") or
         detection_output.get("origin_timestamp")
     )
     if not raw_timestamp:
-        raise ValueError("Feature 1 detection output must contain a detection_timestamp.")
+        raise ValueError("Feature 1 detection output must contain a valid Sentinel-1 acquisition timestamp or observation_time.")
     observation_time_iso = normalize_detection_timestamp(raw_timestamp)
 
     # 3. Resolve geometry
@@ -161,6 +162,7 @@ def feature1_to_feature2_geojson(
     properties: Dict[str, Any] = {
         "spill_id": str(spill_id),
         "observation_time": observation_time_iso,
+        "observation_time_source": detection_output.get("observation_time_source", "sentinel_metadata"),
         "centroid": centroid,
         "area_sq_km": float(area_sq_km),
         "perimeter_km": float(perimeter_km),
@@ -174,6 +176,10 @@ def feature1_to_feature2_geojson(
         "width_km",
         "est_volume_bbl",
         "satellite_source",
+        "acquisition_timestamp",
+        "observation_time_source",
+        "processing_time",
+        "granule_id",
     ):
         if key in detection_output:
             properties[key] = detection_output[key]

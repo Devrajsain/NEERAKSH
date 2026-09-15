@@ -534,7 +534,9 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
                     <div className="flex justify-between py-1 border-b border-gov-border">
                       <span className="text-gov-muted">Calculated Origin:</span>
                       <span className="font-mono font-bold text-gov-blue">
-                        {driftResult ? `${driftResult.origin_latitude.toFixed(4)}°N, ${driftResult.origin_longitude.toFixed(4)}°E` : '—'}
+                        {driftResult?.origin_latitude != null && driftResult?.origin_longitude != null
+                          ? `${Number(driftResult.origin_latitude).toFixed(4)}°N, ${Number(driftResult.origin_longitude).toFixed(4)}°E`
+                          : (driftResult?.status === 'DATA_UNAVAILABLE' ? 'Data Unavailable' : '—')}
                       </span>
                     </div>
                     <div className="flex justify-between py-1">
@@ -548,19 +550,31 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
 
                 <div className="bg-navy-950 text-white rounded-gov p-4 border border-navy-800 flex flex-col justify-between">
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-2 text-amber-400 font-mono text-xs font-bold">
+                    <div className={`flex items-center space-x-2 font-mono text-xs font-bold ${
+                      driftResult?.status === 'DATA_UNAVAILABLE' ? 'text-rose-400' : 'text-amber-400'
+                    }`}>
                       <Compass className="w-4 h-4" />
-                      <span>DRIFT TRAJECTORY HINDCAST COMPLETE</span>
+                      <span>
+                        {driftResult?.status === 'DATA_UNAVAILABLE'
+                          ? 'DRIFT DATA UNAVAILABLE'
+                          : 'DRIFT TRAJECTORY HINDCAST COMPLETE'}
+                      </span>
                     </div>
                     <p className="text-xs text-gray-300 leading-relaxed">
-                      {driftResult 
-                        ? `Origin traced to ${driftResult.origin_latitude.toFixed(4)}°N, ${driftResult.origin_longitude.toFixed(4)}°E. ${driftResult.drift_trajectory?.length || 0} trajectory points computed.`
-                        : 'Computing backward trajectory...'}
+                      {driftResult?.origin_latitude != null && driftResult?.origin_longitude != null
+                        ? `Origin traced to ${Number(driftResult.origin_latitude).toFixed(4)}°N, ${Number(driftResult.origin_longitude).toFixed(4)}°E. ${driftResult.drift_trajectory?.length || 0} trajectory points computed.`
+                        : (driftResult?.status === 'DATA_UNAVAILABLE'
+                            ? `Hindcast simulation unavailable: ${driftResult.error || 'Environmental data could not be retrieved for this region.'}`
+                            : 'Computing backward trajectory...')}
                     </p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-navy-800 text-[11px] font-mono text-emerald-400">
-                    STATUS: READY FOR AIS TRACK CROSS-CORRELATION
+                  <div className={`mt-4 pt-3 border-t border-navy-800 text-[11px] font-mono ${
+                    driftResult?.status === 'DATA_UNAVAILABLE' ? 'text-amber-300' : 'text-emerald-400'
+                  }`}>
+                    {driftResult?.status === 'DATA_UNAVAILABLE'
+                      ? 'STATUS: DRIFT UNAVAILABLE — USING DIRECT SLICK FOOTPRINT'
+                      : 'STATUS: READY FOR AIS TRACK CROSS-CORRELATION'}
                   </div>
                 </div>
               </div>
@@ -629,6 +643,17 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
                         </td>
                       </tr>
                     ))}
+                    {vesselsResult && vesselsResult.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-6 px-4 text-center text-gov-muted text-xs">
+                          <p className="font-semibold text-navy-800 mb-1">No candidate vessels identified</p>
+                          <p className="text-[11px] text-gov-muted">
+                            {processedCase?.summary_json?.attribution_message ||
+                              'Vessel attribution requires reverse hydrodynamic drift origin coordinates or candidate AIS telemetry in the operational window.'}
+                          </p>
+                        </td>
+                      </tr>
+                    )}
                     {!vesselsResult && (
                       <tr>
                         <td colSpan={6} className="py-6 px-3 text-center text-gov-muted">

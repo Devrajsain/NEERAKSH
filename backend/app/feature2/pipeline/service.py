@@ -264,11 +264,20 @@ class Feature2PipelineService:
         hist_horizon_h = self.settings.backward.max_backtrack_hours
         hist_buffer_km = max(self.settings.backward.convergence_cluster_eps_km * 25.0, 50.0)
 
+        # Apply transport-aware buffer if configured
+        forecast_buf_km = getattr(self.settings.data, "forecast_buffer_km", None)
+        max_vel = getattr(self.settings.data, "max_transport_velocity_mps", 1.5)
+        safety_km = getattr(self.settings.data, "safety_margin_km", 25.0)
+        use_transport_buf = getattr(self.settings.data, "use_transport_aware_buffer", True)
+
         hist_domain = EnvironmentalQueryDomain.from_sentinel_observation(
             obs_domain,
             buffer_distance_km=hist_buffer_km,
             historical_horizon_hours=hist_horizon_h,
-            forecast_horizon_hours=48.0
+            forecast_horizon_hours=48.0,
+            forecast_buffer_km=forecast_buf_km if use_transport_buf else None,
+            max_transport_velocity_mps=max_vel,
+            safety_margin_km=safety_km,
         )
 
         # 1. Backward origin estimation
@@ -280,8 +289,10 @@ class Feature2PipelineService:
 
         # 3. Build Unified Feature 2 Result Sections
         # 3.1 Observation
+        obs_time_source = getattr(slick, "observation_time_source", "sentinel_metadata") or "sentinel_metadata"
         observation_summary = ObservationOutputSummary(
             observation_time=obs_time_utc,
+            observation_time_source=obs_time_source,
             centroid=LatLonCoord(lat=slick.centroid.latitude, lon=slick.centroid.longitude),
             geometry=slick.geometry,
             area_km2=slick.area_sq_km,
@@ -297,6 +308,8 @@ class Feature2PipelineService:
         def _classify_source(src_type: Any, cache_st: Any) -> str:
             st = str(src_type).lower()
             cs = str(cache_st).lower()
+            if "mock" in st or "mock" in cs:
+                return "LOCAL_TEST_FIXTURE"
             if "local_netcdf" in st or "fixture" in st or cs == "direct":
                 return "LOCAL_TEST_FIXTURE"
             elif cs == "hit" or "cache" in st:
@@ -329,37 +342,55 @@ class Feature2PipelineService:
                 )
 
             p_name_raw = str(prov.get("source", prov.get("provider_name", mode))).lower()
-            model_src = None
-            access_prov = None
-            if "gfs" in p_name_raw:
-                model_src = "GFS"
-                access_prov = "Open-Meteo"
-            elif "era5" in p_name_raw:
-                model_src = "ERA5"
-                access_prov = "ECMWF CDS API"
-            elif "copernicus" in p_name_raw or "cmems" in p_name_raw or "glorys" in p_name_raw:
-                model_src = "Copernicus Global Ocean Physics Analysis and Forecast"
-                access_prov = "Copernicus Marine Data Store"
-            elif "mock" in p_name_raw:
-                model_src = "MockSynthetic"
-                access_prov = "LocalMock"
-            elif "local" in p_name_raw:
-                model_src = "LocalNetCDF"
-                access_prov = "LocalFilesystem"
+            model_src = prov.get("model_source")
+            access_prov = prov.get("access_provider")
+            if not model_src or not access_prov:
+                if "gfs" in p_name_raw:
+                    model_src = model_src or "NOAA GFS"
+                    access_prov = access_prov or "Open-Meteo GFS API"
+                elif "era5" in p_name_raw:
+                    model_src = model_src or "ERA5"
+                    access_prov = access_prov or "ECMWF CDS API"
+                elif "copernicus" in p_name_raw or "cmems" in p_name_raw or "glorys" in p_name_raw:
+                    model_src = model_src or "Copernicus Global Ocean Physics Analysis and Forecast"
+                    access_prov = access_prov or "Copernicus Marine Toolbox"
+                elif "mock" in p_name_raw:
+                    model_src = model_src or "MockSynthetic"
+                    access_prov = access_prov or "LocalMock"
+                elif "local" in p_name_raw:
+                    model_src = model_src or "LocalNetCDF"
+                    access_prov = access_prov or "LocalFilesystem"
+
+            # Validate actual temporal coverage against required window
+            is_temporally_matched = prov.get("temporally_matched", False)
+            if req_range and act_range:
+                # Must fully cover the requested temporal window
+                is_temporally_matched = (
+                    act_range.start <= req_range.start and
+                    act_range.end >= req_range.end
+                )
 
             return EnvironmentalFieldProvenance(
                 provider_name=prov.get("source", prov.get("provider_name", mode)),
-                dataset_id=prov.get("product", prov.get("dataset_name", "grid")),
+                dataset_id=prov.get("dataset_id", prov.get("product", prov.get("dataset_name", "grid"))),
                 model_source=model_src,
                 access_provider=access_prov,
                 field_type=field_type,
                 data_category=mode,
                 source_type=classified,
                 cache_status=str(cache_st),
+                variables=prov.get("variables"),
+                units=prov.get("units", "m/s"),
+                spatial_resolution=prov.get("spatial_resolution"),
+                temporal_resolution=prov.get("temporal_resolution"),
+                requested_spatial_domain=prov.get("requested_spatial_domain"),
+                actual_spatial_domain=prov.get("spatial_domain"),
                 requested_time_range=req_range,
                 actual_time_range=act_range,
+                spatially_matched=prov.get("spatially_matched"),
+                temporally_matched=is_temporally_matched,
                 filepath=prov.get("active_filepath"),
-                used_in_numerical_simulation=True,
+                used_in_numerical_simulation=prov.get("used_in_numerical_simulation", True),
                 notes="Applied in numerical Lagrangian simulation." if classified == "LOCAL_TEST_FIXTURE" else f"Active remote/cached {mode} stream."
             )
 
@@ -381,16 +412,32 @@ class Feature2PipelineService:
 
         fc_w_class = fields_provenance["forecast_wind"].source_type
         fc_c_class = fields_provenance["forecast_currents"].source_type
-
-        if fc_w_class == "LOCAL_TEST_FIXTURE" and fc_c_class == "LOCAL_TEST_FIXTURE":
-            fc_prov_status = "HISTORICAL_REPLAY_FIXTURE"
-            fc_prov_notes = "Historical replay forecast: forecast forcing for 2018 is supplied by local historical fixture data because current operational GFS does not archive the 2018 forecast cycle."
-        elif fc_w_class in ("LIVE_REMOTE", "LOCAL_CACHE") and fc_c_class in ("LIVE_REMOTE", "LOCAL_CACHE"):
+        fc_w_matched = fields_provenance["forecast_wind"].spatially_matched and fields_provenance["forecast_wind"].temporally_matched
+        fc_c_matched = fields_provenance["forecast_currents"].spatially_matched and fields_provenance["forecast_currents"].temporally_matched
+        fc_w_provider = str(fields_provenance["forecast_wind"].provider_name).lower()
+        is_genuine_ts = obs_time_source in ("sentinel_metadata", "explicit_input")
+        
+        # LIVE_OPERATIONAL requires genuine acquisition ts, live/cached remote data, explicit coverage match, AND operational GFS
+        if (
+            fc_w_class in ("LIVE_REMOTE", "LOCAL_CACHE")
+            and fc_c_class in ("LIVE_REMOTE", "LOCAL_CACHE")
+            and fc_w_matched
+            and fc_c_matched
+            and is_genuine_ts
+            and "gfs" in fc_w_provider
+            and "era5" not in fc_w_provider
+        ):
             fc_prov_status = "LIVE_OPERATIONAL"
-            fc_prov_notes = "Live operational forecast: forecast forcing is supplied directly by operational atmospheric and oceanographic forecast models."
+            fc_prov_notes = "Live operational forecast: forecast forcing is supplied directly by operational atmospheric (NOAA GFS) and oceanographic (Copernicus Marine) forecast models with validated coverage."
+        elif "era5" in fc_w_provider:
+            fc_prov_status = "HISTORICAL_REPLAY"
+            fc_prov_notes = "Historical replay forecast: forecast forcing uses reanalysis data (ERA5), suitable for hindcast but not live operational forward forecasting."
+        elif fc_w_class == "LOCAL_TEST_FIXTURE" and fc_c_class == "LOCAL_TEST_FIXTURE":
+            fc_prov_status = "HISTORICAL_REPLAY_FIXTURE"
+            fc_prov_notes = "Historical replay forecast: forecast forcing is supplied by local historical fixture data."
         else:
-            fc_prov_status = "MIXED"
-            fc_prov_notes = "Mixed forecast forcing: forecast fields are partially supplied by local historical fixtures and partially by operational data."
+            fc_prov_status = "DEGRADED" if is_genuine_ts else "MIXED"
+            fc_prov_notes = "Degraded/Mixed forecast forcing: forecast fields are partially supplied by local fixtures, lack complete verified matching, or exceed coverage bounds."
 
         environment_summary = EnvironmentOutputSummary(
             domain=EnvironmentDomainSummary(

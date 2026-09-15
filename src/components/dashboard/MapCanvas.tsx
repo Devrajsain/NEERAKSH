@@ -366,9 +366,11 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
 
           if (v.trajectoryGeojson && v.trajectoryGeojson.features) {
             v.trajectoryGeojson.features.forEach((feat: any) => {
-              if (feat.properties?.feature_type === 'trajectory' && feat.geometry?.coordinates) {
+              const featType = feat.properties?.feature_type;
+              if ((featType === 'trajectory' || featType === 'ais_gap') && feat.geometry?.coordinates) {
                 const latLngs = feat.geometry.coordinates.map((c: number[]) => [c[1], c[0]]);
                 if (latLngs.length > 1) {
+                  const isGap = featType === 'ais_gap';
                   if (isSelected) {
                     const halo = L.polyline(latLngs, {
                       color: '#FFFFFF',
@@ -380,10 +382,11 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
                   }
 
                   const trackLine = L.polyline(latLngs, {
-                    color: trackColor,
-                    weight: isSelected ? 4 : 2.5,
-                    opacity: isSelected ? 1.0 : (muted ? 0.2 : 0.65),
+                    color: isGap ? '#DC2626' : trackColor,
+                    weight: isSelected ? 4 : (isGap ? 3 : 2.5),
+                    opacity: isSelected ? 1.0 : (muted ? 0.2 : (isGap ? 0.8 : 0.65)),
                     lineCap: 'round',
+                    dashArray: isGap ? '6, 6' : undefined,
                   });
 
                   trackLine.on('click', (e) => {
@@ -392,6 +395,17 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
                   });
                   mapLayersGroup.current?.addLayer(trackLine);
                 }
+              } else if (featType === 'closest_approach' && feat.geometry?.coordinates) {
+                const latLng = [feat.geometry.coordinates[1], feat.geometry.coordinates[0]] as [number, number];
+                const marker = L.circleMarker(latLng, {
+                  radius: 4,
+                  fillColor: '#F59E0B',
+                  color: '#FFFFFF',
+                  weight: 1.5,
+                  opacity: isSelected ? 1.0 : (muted ? 0.2 : 0.8),
+                  fillOpacity: isSelected ? 1.0 : (muted ? 0.2 : 0.8),
+                });
+                mapLayersGroup.current?.addLayer(marker);
               }
             });
           }

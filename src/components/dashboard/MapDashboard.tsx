@@ -54,10 +54,15 @@ export const MapDashboard: React.FC<MapDashboardProps> = ({ onNavigate, onOpenUp
     listCases().then(cases => {
       setAvailableCases(cases);
       if (cases.length > 0) {
-        if (selectedCaseId) setActiveCase(selectedCaseId);
-        else if (activeCase && cases.some(c => c.id === activeCase)) setActiveCase(activeCase);
-        else setActiveCase(cases[0].id);
+        if (selectedCaseId && cases.some(c => c.id === selectedCaseId)) {
+          setActiveCase(selectedCaseId);
+        } else if (activeCase && cases.some(c => c.id === activeCase)) {
+          setActiveCase(activeCase);
+        } else {
+          setActiveCase(cases[0].id);
+        }
       } else {
+        setActiveCase('');
         setIsLoading(false);
       }
     }).catch(() => {
@@ -92,6 +97,13 @@ export const MapDashboard: React.FC<MapDashboardProps> = ({ onNavigate, onOpenUp
         } : null);
         const vessels = data.vessels || [];
 
+        const safeParseJSON = (data: any) => {
+          if (typeof data === 'string') {
+            try { return JSON.parse(data); } catch (e) { return data; }
+          }
+          return data;
+        };
+
         const parsedData: CurrentDashboardData = {
           title: data.case?.name || activeCase,
           location: data.case?.location_name || '',
@@ -108,9 +120,8 @@ export const MapDashboard: React.FC<MapDashboardProps> = ({ onNavigate, onOpenUp
             (spillInfo?.spill_latitude && spillInfo.spill_latitude !== 0) ? spillInfo.spill_latitude : (data.case?.center_latitude && data.case.center_latitude !== 0 ? data.case.center_latitude : 22.47),
             (spillInfo?.spill_longitude && spillInfo.spill_longitude !== 0) ? spillInfo.spill_longitude : (data.case?.center_longitude && data.case.center_longitude !== 0 ? data.case.center_longitude : 69.21),
           ],
-          zoom: 10,
-          spillPolygon: spillInfo?.polygon_geojson?.coordinates?.[0]?.map((c: number[]) => [c[1], c[0]]) || [],
-          driftPath: (driftInfo?.drift_trajectory || []).map((pt: any) => ({
+          spillPolygon: safeParseJSON(spillInfo?.polygon_geojson)?.coordinates?.[0]?.map((c: number[]) => [c[1], c[0]]) || [],
+          driftPath: (safeParseJSON(driftInfo?.drift_trajectory) || []).map((pt: any) => ({
             label: pt.time,
             lat: pt.lat,
             lng: pt.lon,
@@ -134,11 +145,11 @@ export const MapDashboard: React.FC<MapDashboardProps> = ({ onNavigate, onOpenUp
             proximity: v.proximity_score,
             trajectory: v.trajectory_score,
             behavioral: v.behavioral_score,
-            flags: v.warning_flags || [],
-            qualityFlags: v.quality_flags || [],
-            evidence: v.evidence_metrics,
+            flags: safeParseJSON(v.warning_flags) || [],
+            qualityFlags: safeParseJSON(v.quality_flags) || [],
+            evidence: safeParseJSON(v.evidence_metrics),
             explanation: v.explanation,
-            trajectoryGeojson: v.trajectory_geojson,
+            trajectoryGeojson: safeParseJSON(v.trajectory_geojson),
             color: VESSEL_TRACK_COLORS[idx % VESSEL_TRACK_COLORS.length],
             lat: v.current_latitude,
             lng: v.current_longitude,

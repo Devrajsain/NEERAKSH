@@ -87,6 +87,7 @@ async def create_case(
     location_name: str = Form(...),
     center_latitude: Optional[float] = Form(None),
     center_longitude: Optional[float] = Form(None),
+    observation_time: Optional[str] = Form(None),
     image_file: Optional[UploadFile] = File(None),
     csv_file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
@@ -127,7 +128,10 @@ async def create_case(
 
     # Run Analysis Pipeline
     try:
-        summary = execute_5step_pipeline(case_id, image_path, csv_path, center_latitude, center_longitude)
+        summary = execute_5step_pipeline(
+            case_id, image_path, csv_path, center_latitude, center_longitude,
+            observation_time=observation_time
+        )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
 
@@ -167,31 +171,35 @@ async def create_case(
     
     db.add(case_obj)
 
-    # Save Spill DB Entry if complete
-    if status == "COMPLETED" and drift_info:
+    # Save Spill DB Entry if detection completed
+    if spill_info and spill_info.get("area_km2") is not None:
+        spill_orig_lat = drift_info.get("origin_latitude") if drift_info and drift_info.get("origin_latitude") is not None else float(stored_lat)
+        spill_orig_lon = drift_info.get("origin_longitude") if drift_info and drift_info.get("origin_longitude") is not None else float(stored_lon)
         spill_obj = SpillDetection(
             id=f"spill-{case_id}",
             case_id=case_id,
-            confidence_score=spill_info["confidence_score"],
-            confidence_label=spill_info["confidence_label"],
-            area_km2=spill_info["area_km2"],
-            length_km=spill_info["length_km"],
-            width_km=spill_info["width_km"],
-            est_volume_bbl=spill_info["est_volume_bbl"],
-            detection_timestamp=spill_info["detection_timestamp"],
-            satellite_source=spill_info["satellite_source"],
+            confidence_score=spill_info.get("confidence_score", 0.85),
+            confidence_label=spill_info.get("confidence_label", "MODERATE"),
+            area_km2=spill_info.get("area_km2", 0.0),
+            length_km=spill_info.get("length_km", 0.0),
+            width_km=spill_info.get("width_km", 0.0),
+            est_volume_bbl=spill_info.get("est_volume_bbl", 0),
+            detection_timestamp=spill_info.get("detection_timestamp", ""),
+            satellite_source=spill_info.get("satellite_source", "Sentinel-1A SAR"),
             polygon_geojson=spill_info.get("polygon_geojson") or {},
-            origin_latitude=drift_info["origin_latitude"],
-            origin_longitude=drift_info["origin_longitude"],
-            origin_timestamp=drift_info["origin_timestamp"],
-            drift_trajectory_json=drift_info["drift_trajectory"]
+            origin_latitude=spill_orig_lat,
+            origin_longitude=spill_orig_lon,
+            origin_timestamp=(drift_info.get("origin_timestamp") or "") if drift_info else "",
+            drift_trajectory_json=(drift_info.get("drift_trajectory") or []) if drift_info else []
         )
         db.add(spill_obj)
 
         # Save Vessel DB Entries
-        _persist_vessel_records(db, case_id, summary.get("vessels", []))
+        if summary.get("vessels"):
+            _persist_vessel_records(db, case_id, summary.get("vessels", []))
 
-        # Save Feature 2 Results
+    # Always persist Feature 2 Results if present in pipeline summary
+    if summary.get("feature2"):
         _persist_feature2_result(db, case_id, summary)
 
     db.commit()
@@ -204,6 +212,7 @@ async def continue_feature2(
     case_id: str,
     latitude: float = Form(...),
     longitude: float = Form(...),
+    observation_time: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -226,7 +235,8 @@ async def continue_feature2(
             case_obj.image_path,
             case_obj.csv_path,
             center_lat=latitude,
-            center_lon=longitude
+            center_lon=longitude,
+            observation_time=observation_time,
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))
@@ -254,10 +264,10 @@ async def continue_feature2(
             detection_timestamp=spill_info["detection_timestamp"],
             satellite_source=spill_info["satellite_source"],
             polygon_geojson=spill_info.get("polygon_geojson") or {},
-            origin_latitude=drift_info["origin_latitude"] if drift_info else latitude,
-            origin_longitude=drift_info["origin_longitude"] if drift_info else longitude,
-            origin_timestamp=drift_info["origin_timestamp"] if drift_info else "",
-            drift_trajectory_json=drift_info["drift_trajectory"] if drift_info else []
+            origin_latitude=drift_info["origin_latitude"] if (drift_info and drift_info.get("origin_latitude") is not None) else latitude,
+            origin_longitude=drift_info["origin_longitude"] if (drift_info and drift_info.get("origin_longitude") is not None) else longitude,
+            origin_timestamp=(drift_info.get("origin_timestamp") or "") if drift_info else "",
+            drift_trajectory_json=(drift_info.get("drift_trajectory") or []) if drift_info else []
         )
         db.add(spill_obj)
     else:
@@ -271,10 +281,10 @@ async def continue_feature2(
         spill_obj.satellite_source = spill_info["satellite_source"]
         spill_obj.polygon_geojson = spill_info.get("polygon_geojson") or {}
         if drift_info:
-            spill_obj.origin_latitude = drift_info["origin_latitude"]
-            spill_obj.origin_longitude = drift_info["origin_longitude"]
-            spill_obj.origin_timestamp = drift_info["origin_timestamp"]
-            spill_obj.drift_trajectory_json = drift_info["drift_trajectory"]
+            spill_obj.origin_latitude = drift_info["origin_latitude"] if drift_info.get("origin_latitude") is not None else latitude
+            spill_obj.origin_longitude = drift_info["origin_longitude"] if drift_info.get("origin_longitude") is not None else longitude
+            spill_obj.origin_timestamp = drift_info.get("origin_timestamp") or ""
+            spill_obj.drift_trajectory_json = drift_info.get("drift_trajectory") or []
 
     # Re-save Vessel entries
     db.query(VesselAttribution).filter(VesselAttribution.case_id == case_id).delete()
@@ -304,6 +314,31 @@ def get_case_spill(case_id: str, db: Session = Depends(get_db)):
     """Returns the spill detection data for a specific case."""
     spill = db.query(SpillDetection).filter(SpillDetection.case_id == case_id).first()
     if not spill:
+        case_obj = db.query(ForensicCase).filter(ForensicCase.id == case_id).first()
+        if case_obj and case_obj.summary_json:
+            s_json = case_obj.summary_json
+            spill_info = s_json.get("spill") or {}
+            drift_info = s_json.get("drift") or {}
+            if spill_info or drift_info:
+                orig_lat = drift_info.get("origin_latitude") if drift_info.get("origin_latitude") is not None else case_obj.center_latitude
+                orig_lon = drift_info.get("origin_longitude") if drift_info.get("origin_longitude") is not None else case_obj.center_longitude
+                return {
+                    "id": f"spill-{case_id}",
+                    "case_id": case_id,
+                    "confidence_score": spill_info.get("confidence_score", 0.85),
+                    "confidence_label": spill_info.get("confidence_label", "MODERATE"),
+                    "area_km2": spill_info.get("area_km2", 0.0),
+                    "length_km": spill_info.get("length_km", 0.0),
+                    "width_km": spill_info.get("width_km", 0.0),
+                    "est_volume_bbl": spill_info.get("est_volume_bbl", 0),
+                    "detection_timestamp": spill_info.get("detection_timestamp", ""),
+                    "satellite_source": spill_info.get("satellite_source", "Sentinel-1A SAR"),
+                    "polygon_geojson": spill_info.get("polygon_geojson") or {},
+                    "origin_latitude": orig_lat,
+                    "origin_longitude": orig_lon,
+                    "origin_timestamp": drift_info.get("origin_timestamp", "") or "",
+                    "drift_trajectory_json": drift_info.get("drift_trajectory", []) or []
+                }
         raise HTTPException(status_code=404, detail="Spill record not found for this case")
     return spill
 

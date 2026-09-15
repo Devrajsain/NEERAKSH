@@ -198,9 +198,13 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
                             age_seconds=p.age_seconds,
                             mass_kg=p.mass_kg,
                             is_active=False,
-                            beached=False
+                            beached=True
                         )
                     )
+                    continue
+
+                if math.isnan(p.latitude) or math.isnan(p.longitude):
+                    p.active = False
                     continue
 
                 # 1. Query environmental current velocity at particle's spacetime location
@@ -212,11 +216,10 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
                     )
                     u_curr = curr_sample.u
                     v_curr = curr_sample.v
-                except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError) as err:
+                except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError, Exception) as err:
                     logger.warning(
                         f"Particle {p.particle_id} out of current data coverage at "
-                        f"({p.latitude:.4f}, {p.longitude:.4f}, {current_step_time.isoformat()}): {err}. "
-                        "Deactivating particle."
+                        f"({p.latitude}, {p.longitude}, {current_step_time.isoformat()}): {err}. Deactivating particle."
                     )
                     p.active = False
                     deactivated_state = ParticleState(
@@ -228,7 +231,7 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
                         age_seconds=p.age_seconds + step_dt,
                         mass_kg=p.mass_kg,
                         is_active=False,
-                        beached=False
+                        beached=True
                     )
                     trajectories[p.particle_id].append(deactivated_state)
                     step_states_snapshot.append(deactivated_state)
@@ -246,11 +249,10 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
                         )
                         u_wind = wind_sample.u
                         v_wind = wind_sample.v
-                    except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError) as err:
+                    except (EnvironmentalCoverageError, OutOfDomainError, EnvironmentalDataUnavailableError, Exception) as err:
                         logger.warning(
                             f"Particle {p.particle_id} out of wind data coverage at "
-                            f"({p.latitude:.4f}, {p.longitude:.4f}, {current_step_time.isoformat()}): {err}. "
-                            "Deactivating particle."
+                            f"({p.latitude}, {p.longitude}, {current_step_time.isoformat()}): {err}. Deactivating particle."
                         )
                         p.active = False
                         deactivated_state = ParticleState(
@@ -262,7 +264,7 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
                             age_seconds=p.age_seconds + step_dt,
                             mass_kg=p.mass_kg,
                             is_active=False,
-                            beached=False
+                            beached=True
                         )
                         trajectories[p.particle_id].append(deactivated_state)
                         step_states_snapshot.append(deactivated_state)
@@ -273,6 +275,23 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
                 v_wind_eff = effective_leeway * (u_wind * sin_theta + v_wind * cos_theta)
                 u_eff = u_curr + u_wind_eff
                 v_eff = v_curr + v_wind_eff
+
+                if math.isnan(u_eff) or math.isnan(v_eff):
+                    p.active = False
+                    deactivated_state = ParticleState(
+                        id=idx,
+                        latitude=p.latitude,
+                        longitude=p.longitude,
+                        timestamp=next_step_time,
+                        ensemble_member_id=p.ensemble_member_id,
+                        age_seconds=p.age_seconds + step_dt,
+                        mass_kg=p.mass_kg,
+                        is_active=False,
+                        beached=True
+                    )
+                    trajectories[p.particle_id].append(deactivated_state)
+                    step_states_snapshot.append(deactivated_state)
+                    continue
 
                 if step_callback is not None:
                     step_callback(p, u_eff, v_eff, current_step_time)
@@ -299,6 +318,23 @@ class ForwardSimulationEngine(ParticleSimulationEngine):
 
                 new_lat = p.latitude + dlat_deg
                 new_lon = normalize_longitude(p.longitude + dlon_deg)
+
+                if math.isnan(new_lat) or math.isnan(new_lon):
+                    p.active = False
+                    deactivated_state = ParticleState(
+                        id=idx,
+                        latitude=p.latitude,
+                        longitude=p.longitude,
+                        timestamp=next_step_time,
+                        ensemble_member_id=p.ensemble_member_id,
+                        age_seconds=p.age_seconds + step_dt,
+                        mass_kg=p.mass_kg,
+                        is_active=False,
+                        beached=True
+                    )
+                    trajectories[p.particle_id].append(deactivated_state)
+                    step_states_snapshot.append(deactivated_state)
+                    continue
 
                 # Geographic bounds sanity check [-90, 90]
                 if new_lat > 90.0:

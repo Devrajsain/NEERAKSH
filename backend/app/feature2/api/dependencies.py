@@ -28,7 +28,18 @@ def get_settings() -> Feature2Settings:
 
 def get_currents_provider(settings: Feature2Settings = default_settings) -> EnvironmentalDataProvider:
     """Returns configured ocean currents data provider."""
-    provider_type = settings.data.currents_provider
+    import os
+    if settings.environment == "production":
+        provider_type = settings.data.currents_provider
+        if provider_type == "mock":
+            return MockCurrentsProvider()
+    else:
+        env_curr = os.getenv("FEATURE2_CURRENTS_PROVIDER", "").lower()
+        env_mode = os.getenv("FEATURE2_ENVIRONMENT", "").lower()
+        if env_curr == "mock" or env_mode == "testing":
+            return MockCurrentsProvider()
+        provider_type = env_curr or settings.data.currents_provider
+
     if provider_type == "local_netcdf" and settings.data.local_currents_filepath:
         mapping = VariableMapping(
             u_var=settings.data.currents_variable_mapping.u_var,
@@ -55,14 +66,27 @@ def get_currents_provider(settings: Feature2Settings = default_settings) -> Envi
     elif provider_type == "hycom":
         return HYCOMCurrentsProvider()
     else:
+        if settings.environment == "production":
+            raise ConfigurationError("Production mode requires a real currents provider (copernicus, hycom, or local_netcdf).")
         return MockCurrentsProvider()
 
 
 def get_forecast_currents_provider(settings: Feature2Settings = default_settings) -> EnvironmentalDataProvider:
     """Returns configured forecast ocean currents data provider (+0 to +48h)."""
-    provider_type = getattr(settings.data, "forecast_currents_provider", None) or (
-        "copernicus" if settings.environment == "production" else settings.data.currents_provider
-    )
+    import os
+    if settings.environment == "production":
+        provider_type = getattr(settings.data, "forecast_currents_provider", None) or "copernicus"
+        if provider_type == "mock":
+            return MockCurrentsProvider()
+    else:
+        env_fc = os.getenv("FEATURE2_FORECAST_CURRENTS_PROVIDER", "").lower()
+        env_mode = os.getenv("FEATURE2_ENVIRONMENT", "").lower()
+        if env_fc == "mock" or env_mode == "testing" or os.getenv("FEATURE2_CURRENTS_PROVIDER", "").lower() == "mock":
+            return MockCurrentsProvider()
+        provider_type = env_fc or getattr(settings.data, "forecast_currents_provider", None) or (
+            "copernicus" if settings.environment == "production" else settings.data.currents_provider
+        )
+
     if provider_type == "copernicus":
         copernicus_cfg = CopernicusConfig(
             dataset_id=settings.data.copernicus_forecast_dataset_id,
@@ -94,7 +118,18 @@ def get_forecast_currents_provider(settings: Feature2Settings = default_settings
 
 def get_wind_provider(settings: Feature2Settings = default_settings) -> EnvironmentalDataProvider:
     """Returns configured surface wind data provider."""
-    provider_type = settings.data.wind_provider
+    import os
+    if settings.environment == "production":
+        provider_type = settings.data.wind_provider
+        if provider_type == "mock":
+            return MockWindProvider()
+    else:
+        env_wind = os.getenv("FEATURE2_WIND_PROVIDER", "").lower()
+        env_mode = os.getenv("FEATURE2_ENVIRONMENT", "").lower()
+        if env_wind == "mock" or env_mode == "testing":
+            return MockWindProvider()
+        provider_type = env_wind or settings.data.wind_provider
+
     if provider_type == "local_netcdf" and settings.data.local_wind_filepath:
         mapping = VariableMapping(
             u_var=settings.data.wind_variable_mapping.u_var,
@@ -127,14 +162,27 @@ def get_wind_provider(settings: Feature2Settings = default_settings) -> Environm
             mode="historical",
         )
     else:
+        if settings.environment == "production":
+            raise ConfigurationError("Production mode requires a real wind provider (era5, gfs, or local_netcdf).")
         return MockWindProvider()
 
 
 def get_forecast_wind_provider(settings: Feature2Settings = default_settings) -> EnvironmentalDataProvider:
     """Returns configured forecast surface wind data provider (+0 to +48h)."""
-    provider_type = getattr(settings.data, "forecast_wind_provider", None) or (
-        "gfs" if settings.environment == "production" else settings.data.wind_provider
-    )
+    import os
+    if settings.environment == "production":
+        provider_type = getattr(settings.data, "forecast_wind_provider", None) or "gfs"
+        if provider_type == "mock":
+            return MockWindProvider()
+    else:
+        env_fwind = os.getenv("FEATURE2_FORECAST_WIND_PROVIDER", "").lower()
+        env_mode = os.getenv("FEATURE2_ENVIRONMENT", "").lower()
+        if env_fwind == "mock" or env_mode == "testing" or os.getenv("FEATURE2_WIND_PROVIDER", "").lower() == "mock":
+            return MockWindProvider()
+        provider_type = env_fwind or getattr(settings.data, "forecast_wind_provider", None) or (
+            "gfs" if settings.environment == "production" else settings.data.wind_provider
+        )
+
     if provider_type == "gfs":
         gfs_cfg = GFSConfig(
             data_path=settings.data.gfs_data_path,
@@ -159,6 +207,8 @@ def get_forecast_wind_provider(settings: Feature2Settings = default_settings) ->
             variable_mapping=mapping
         )
     elif provider_type == "mock":
+        if settings.environment == "production":
+            raise ConfigurationError("Production mode strictly forbids MockWindProvider for forecast.")
         return MockWindProvider()
     return get_wind_provider(settings)
 

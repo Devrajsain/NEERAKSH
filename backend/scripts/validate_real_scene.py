@@ -13,10 +13,18 @@ import numpy as np
 from PIL import Image
 import tifffile
 
-# Ensure project root is in sys.path
+# Ensure project root and app directory are in sys.path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
+app_dir = os.path.join(PROJECT_ROOT, "app")
+for p in [PROJECT_ROOT, app_dir]:
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+try:
+    import app.feature2
+    sys.modules.setdefault("feature2", app.feature2)
+except Exception:
+    pass
 
 from feature2.config import Feature2Settings
 from feature2.data.cache import EnvironmentalDataCacheManager, generate_cache_key

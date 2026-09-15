@@ -151,7 +151,7 @@
         "mode": "historical",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\sihRefine\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_era5_2018.nc",
+        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_era5_2018.nc",
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -176,7 +176,7 @@
         "mode": "historical",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\sihRefine\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
+        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -199,7 +199,7 @@
         "mode": "forecast",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\sihRefine\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_forecast_wind_2018.nc",
+        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_forecast_wind_2018.nc",
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -224,7 +224,7 @@
         "mode": "forecast",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\sihRefine\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
+        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,

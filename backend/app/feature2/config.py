@@ -73,7 +73,7 @@ class DataSourceConfig(BaseModel):
         description="Copernicus Marine dataset ID for ocean analysis & forecast currents."
     )
     copernicus_forecast_dataset_id: str = Field(
-        default="cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
+        default="cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
         description="Copernicus Marine dataset ID for operational forecast currents."
     )
     copernicus_depth_level_m: float = Field(
@@ -110,6 +110,30 @@ class DataSourceConfig(BaseModel):
         ge=0.0,
         le=500.0,
         description="Spatial buffer padding in km applied to the Sentinel-1 footprint for environmental data querying."
+    )
+    max_transport_velocity_mps: float = Field(
+        default=1.5,
+        ge=0.1,
+        le=10.0,
+        description="Conservative upper bound for environmental transport velocity (current + wind leeway) in m/s."
+    )
+    safety_margin_km: float = Field(
+        default=25.0,
+        ge=0.0,
+        le=200.0,
+        description="Additional safety margin in km added to expected transport distance."
+    )
+    forecast_buffer_km: Optional[float] = Field(
+        default=None,
+        description="Explicit override for forecast environmental domain buffer in km. If None, derived from transport velocity * horizon + safety margin."
+    )
+    use_transport_aware_buffer: bool = Field(
+        default=True,
+        description="Whether to dynamically size environmental query domain using transport velocity * forecast horizon + safety margin."
+    )
+    copernicus_reanalysis_dataset_id: str = Field(
+        default="cmems_mod_glo_phy_my_0.083deg_P1D-m",
+        description="Copernicus Marine dataset ID for historical Multi-Year reanalysis currents."
     )
     timeout_seconds: int = Field(
         default=30,

@@ -267,6 +267,15 @@ class ForwardForecaster:
             reason = None if is_valid else (
                 "insufficient_active_particles" if total_count > 0 else "simulation_trajectory_empty"
             )
+            
+            status = "ACTIVE"
+            if active_count == 0:
+                if any(getattr(p, "beached", False) for p in particles_at_k):
+                    status = "LANDED"
+                    reason = "All particles intersected coastline"
+                else:
+                    status = "DEGRADED"
+                    reason = "All particles deactivated or out of bounds"
 
             # Compute centroid, spatial covariance, and uncertainty ellipse
             if active_count > 0:
@@ -352,11 +361,35 @@ class ForwardForecaster:
                 longitude=round(mean_lon, 6)
             )
 
+            # Environmental contribution logging
+            c_u, c_v = 0.0, 0.0
+            w_u, w_v = 0.0, 0.0
+            
+            if active_count > 0:
+                try:
+                    curr_samp = self.current_provider.get_current(mean_lat, mean_lon, target_time)
+                    c_u, c_v = curr_samp.u, curr_samp.v
+                except Exception:
+                    pass
+
+                if self.wind_provider:
+                    try:
+                        wind_samp = self.wind_provider.get_wind(mean_lat, mean_lon, target_time)
+                        w_u, w_v = wind_samp.u, wind_samp.v
+                    except Exception:
+                        pass
+                        
+            leeway = windage_fraction if windage_fraction is not None else self.settings.windage.leeway_factor
+            tot_u = c_u + leeway * w_u
+            tot_v = c_v + leeway * w_v
+
             horizon_res = ForecastHorizonResult(
                 lead_time_hours=float(h),
                 forecast_time=target_time,
                 valid=is_valid,
                 reason=reason,
+                status=status,
+                termination_reason=reason if status != "ACTIVE" else None,
                 centroid=pred_centroid,
                 uncertainty=uncertainty_info,
                 covariance_matrix=[
@@ -369,7 +402,16 @@ class ForwardForecaster:
                 quality=quality,
                 mean_drift_speed_kmh=round(drift_speed_kmh, 3),
                 mean_drift_direction_deg=round(drift_dir_deg, 2),
-                predicted_slick_polygon=uncertainty_obj.uncertainty_polygon
+                predicted_slick_polygon=uncertainty_obj.uncertainty_polygon,
+                current_u=round(c_u, 4) if c_u else 0.0,
+                current_v=round(c_v, 4) if c_v else 0.0,
+                wind_u=round(w_u, 4) if w_u else 0.0,
+                wind_v=round(w_v, 4) if w_v else 0.0,
+                windage_coefficient=leeway,
+                total_u=round(tot_u, 4) if tot_u else 0.0,
+                total_v=round(tot_v, 4) if tot_v else 0.0,
+                current_displacement_km=None, # Too complex to aggregate precisely here without per-particle history
+                wind_displacement_km=None,
             )
             horizon_results[key] = horizon_res
 

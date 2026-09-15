@@ -236,9 +236,20 @@ class ForecastHorizonResult(BaseModel):
     total_particle_count: int = Field(..., ge=0, description="Total seeded particles in simulation.")
     active_fraction: float = Field(..., ge=0.0, le=1.0, description="Fraction of particles remaining active and within domain.")
     quality: str = Field("high", description="Forecast data/model quality indicator: 'high', 'medium', or 'low'.")
+    status: str = Field("ACTIVE", description="State of the particles at this horizon (e.g., ACTIVE, LANDED).")
+    termination_reason: Optional[str] = Field(None, description="Explanation if particles have terminated (e.g., land interaction).")
     mean_drift_speed_kmh: Optional[float] = Field(None, ge=0.0, description="Mean drift speed from T0 in km/h.")
     mean_drift_direction_deg: Optional[float] = Field(None, ge=0.0, le=360.0, description="Mean drift direction from T0 in degrees from North.")
     predicted_slick_polygon: Optional[GeoJSONGeometry] = Field(None, description="Optional predicted slick contour polygon.")
+    current_u: Optional[float] = Field(None, description="Average ocean current eastward velocity in m/s.")
+    current_v: Optional[float] = Field(None, description="Average ocean current northward velocity in m/s.")
+    wind_u: Optional[float] = Field(None, description="Average 10m wind eastward velocity in m/s.")
+    wind_v: Optional[float] = Field(None, description="Average 10m wind northward velocity in m/s.")
+    windage_coefficient: Optional[float] = Field(None, description="Windage coefficient (leeway fraction) applied.")
+    total_u: Optional[float] = Field(None, description="Average total effective eastward velocity in m/s.")
+    total_v: Optional[float] = Field(None, description="Average total effective northward velocity in m/s.")
+    current_displacement_km: Optional[float] = Field(None, description="Cumulative displacement due to ocean currents in km.")
+    wind_displacement_km: Optional[float] = Field(None, description="Cumulative displacement due to windage in km.")
 
     @property
     def predicted_centroid(self) -> CentroidCoordinates:
@@ -316,6 +327,7 @@ class LatLonCoord(BaseModel):
 class ObservationOutputSummary(BaseModel):
     """Observation metadata derived directly from Feature 1 Sentinel-1 SAR detection."""
     observation_time: datetime = Field(..., description="Satellite overpass / observation timestamp (UTC).")
+    observation_time_source: Optional[str] = Field(default="sentinel_metadata", description="Provenance of observation timestamp ('sentinel_metadata', 'explicit_input', 'test_fixture').")
     centroid: LatLonCoord = Field(..., description="Observed slick centroid.")
     geometry: GeoJSONGeometry = Field(..., description="Observed slick polygon boundary from SAR.")
     area_km2: float = Field(..., ge=0.0, description="Estimated surface area of observed slick in square kilometers.")
@@ -352,8 +364,16 @@ class EnvironmentalFieldProvenance(BaseModel):
     data_category: str = Field(..., description="'historical' or 'forecast'.")
     source_type: str = Field(..., description="Provenance source classification: 'LIVE_REMOTE', 'LOCAL_CACHE', or 'LOCAL_TEST_FIXTURE'.")
     cache_status: str = Field(default="none", description="Cache status: 'hit', 'miss', 'direct', etc.")
+    variables: Optional[List[str]] = Field(default=None, description="Physical variables extracted (e.g. ['uo', 'vo'] or ['u10', 'v10']).")
+    units: Optional[str] = Field(default="m/s", description="Physical measurement units.")
+    spatial_resolution: Optional[str] = Field(default=None, description="Native spatial grid resolution.")
+    temporal_resolution: Optional[str] = Field(default=None, description="Native temporal resolution of source dataset.")
+    requested_spatial_domain: Optional[Dict[str, float]] = Field(default=None, description="Requested spatial bounding box.")
+    actual_spatial_domain: Optional[Dict[str, Optional[float]]] = Field(default=None, description="Actual spatial domain available from dataset.")
     requested_time_range: Optional[TimeWindowSummary] = Field(None, description="Requested temporal window [start, end].")
     actual_time_range: Optional[TimeWindowSummary] = Field(None, description="Actual coverage window available from dataset.")
+    spatially_matched: Optional[bool] = Field(default=None, description="Whether dataset spatial domain covers requested trajectory domain.")
+    temporally_matched: Optional[bool] = Field(default=None, description="Whether dataset temporal domain covers requested simulation window.")
     filepath: Optional[str] = Field(None, exclude=True, description="Active local NetCDF filepath (excluded from public serialization).")
     used_in_numerical_simulation: bool = Field(default=True, description="Whether this field was directly sampled in advection.")
     notes: Optional[str] = Field(None, description="Specific scientific/operational provenance notes.")
@@ -432,7 +452,18 @@ class ForecastHorizonSummary(BaseModel):
     )
     quality: str = Field(..., description="Forecast horizon quality flag ('HIGH', 'MEDIUM', 'LOW').")
     valid: bool = Field(True, description="Whether forecast horizon has sufficient environmental coverage and active particles.")
+    status: str = Field("ACTIVE", description="State of the particles at this horizon (e.g., ACTIVE, LANDED).")
+    termination_reason: Optional[str] = Field(None, description="Explanation if particles have terminated.")
     predicted_slick_polygon: Optional[GeoJSONGeometry] = None
+    current_u: Optional[float] = Field(None, description="Average ocean current eastward velocity in m/s.")
+    current_v: Optional[float] = Field(None, description="Average ocean current northward velocity in m/s.")
+    wind_u: Optional[float] = Field(None, description="Average 10m wind eastward velocity in m/s.")
+    wind_v: Optional[float] = Field(None, description="Average 10m wind northward velocity in m/s.")
+    windage_coefficient: Optional[float] = Field(None, description="Windage coefficient (leeway fraction) applied.")
+    total_u: Optional[float] = Field(None, description="Average total effective eastward velocity in m/s.")
+    total_v: Optional[float] = Field(None, description="Average total effective northward velocity in m/s.")
+    current_displacement_km: Optional[float] = Field(None, description="Cumulative displacement due to ocean currents in km.")
+    wind_displacement_km: Optional[float] = Field(None, description="Cumulative displacement due to windage in km.")
 
 
 class ForecastInitializationSummary(BaseModel):

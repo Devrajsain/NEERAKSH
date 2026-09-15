@@ -129,17 +129,59 @@ class EnvironmentalQueryDomain(BaseModel):
         return self.environmental_bbox[3]
 
     @classmethod
+    def calculate_transport_buffer_km(
+        cls,
+        forecast_horizon_hours: float = 48.0,
+        max_transport_velocity_mps: float = 1.5,
+        safety_margin_km: float = 25.0,
+    ) -> float:
+        """
+        Estimates an upper bound for oil slick drift distance over the forecast window:
+            transport_distance = maximum_environmental_velocity * forecast_duration
+            buffer = transport_distance + safety_margin
+
+        Args:
+            forecast_horizon_hours: Duration of forecast in hours.
+            max_transport_velocity_mps: Conservative upper bound transport speed (current + windage) in m/s.
+            safety_margin_km: Additional safety margin in km.
+
+        Returns:
+            Buffer distance in kilometers rounded to 2 decimal places.
+        """
+        duration_seconds = max(0.0, float(forecast_horizon_hours)) * 3600.0
+        transport_distance_km = (float(max_transport_velocity_mps) * duration_seconds) / 1000.0
+        return round(transport_distance_km + float(safety_margin_km), 2)
+
+    @classmethod
     def from_sentinel_observation(
         cls,
         sentinel_domain: SentinelObservationDomain,
-        buffer_distance_km: float = 50.0,
+        buffer_distance_km: Optional[float] = None,
         historical_horizon_hours: float = 72.0,
         forecast_horizon_hours: float = 48.0,
+        forecast_buffer_km: Optional[float] = None,
+        max_transport_velocity_mps: Optional[float] = None,
+        safety_margin_km: Optional[float] = None,
     ) -> "EnvironmentalQueryDomain":
         """
         Derives an EnvironmentalQueryDomain by buffering the Sentinel-1 footprint
         and calculating historical/forecast spacetime windows from observation_time T0.
+        Supports transport-aware buffer derivation based on forecast duration and velocity.
         """
+        # Determine effective buffer distance
+        if forecast_buffer_km is not None:
+            effective_buffer = float(forecast_buffer_km)
+        elif buffer_distance_km is not None:
+            effective_buffer = float(buffer_distance_km)
+        elif max_transport_velocity_mps is not None or safety_margin_km is not None:
+            effective_buffer = cls.calculate_transport_buffer_km(
+                forecast_horizon_hours=forecast_horizon_hours,
+                max_transport_velocity_mps=max_transport_velocity_mps if max_transport_velocity_mps is not None else 1.5,
+                safety_margin_km=safety_margin_km if safety_margin_km is not None else 25.0,
+            )
+        else:
+            effective_buffer = 50.0
+
         source_pts = [
             (sentinel_domain.min_lat, sentinel_domain.min_lon),
             (sentinel_domain.max_lat, sentinel_domain.max_lon),
@@ -147,7 +189,7 @@ class EnvironmentalQueryDomain(BaseModel):
         # Apply geodetic buffer padding in km
         buf_min_lat, buf_max_lat, buf_min_lon, buf_max_lon = compute_bounding_box(
             source_pts,
-            buffer_km=buffer_distance_km
+            buffer_km=effective_buffer
         )
 
         obs_time = normalize_to_utc(sentinel_domain.observation_time)
@@ -161,7 +203,7 @@ class EnvironmentalQueryDomain(BaseModel):
             observation_time=obs_time,
             source_bbox=sentinel_domain.source_bbox,
             environmental_bbox=(buf_min_lat, buf_max_lat, buf_min_lon, buf_max_lon),
-            buffer_distance_km=buffer_distance_km,
+            buffer_distance_km=effective_buffer,
             historical_start_time=hist_start,
             historical_end_time=hist_end,
             forecast_start_time=fc_start,

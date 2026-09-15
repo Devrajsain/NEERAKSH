@@ -162,6 +162,7 @@ def execute_5step_pipeline(
     csv_path: Optional[str],
     center_lat: Optional[float] = None,
     center_lon: Optional[float] = None,
+    observation_time: Optional[str] = None,
 ) -> dict:
     """
     Executes the 5-step forensic analysis pipeline:
@@ -171,11 +172,13 @@ def execute_5step_pipeline(
     4. AIS vessel spatio-temporal attribution
     5. Final case summary compilation
 
-    If GeoTIFF metadata exists, real detected spill coordinates are extracted.
-    If JPG/PNG or unreferenced TIFF, coordinates must be provided and valid before Feature 2 runs.
+    If GeoTIFF metadata exists, real detected spill coordinates and genuine Sentinel-1
+    acquisition timestamps are extracted.
+    If JPG/PNG or unreferenced TIFF, coordinates and timestamps must be provided and valid
+    before Feature 2 runs.
     """
     # Step 2: Satellite Detection (Feature 1)
-    spill_res = run_spill_detection_model(image_path, center_lat, center_lon)
+    spill_res = run_spill_detection_model(image_path, center_lat, center_lon, observation_time=observation_time)
 
     # Determine effective coordinates: GeoTIFF auto-detected coordinates take precedence
     if spill_res.get("geospatial_metadata_detected") and spill_res.get("spill_latitude") is not None:
@@ -209,11 +212,40 @@ def execute_5step_pipeline(
             "processed_at": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
         }
 
+    is_production = os.getenv("FEATURE2_ENVIRONMENT", "").lower() == "production"
+    if is_production and (not spill_res.get("observation_time") or spill_res.get("status") == "DATA_UNAVAILABLE"):
+        logger.warning(f"Case {case_id}: Sentinel-1 acquisition timestamp unavailable in production mode. Failing closed.")
+        return {
+            "case_id": case_id,
+            "status": "DATA_UNAVAILABLE",
+            "spill": spill_res,
+            "drift": {
+                "status": "DATA_UNAVAILABLE",
+                "origin_latitude": None,
+                "origin_longitude": None,
+                "origin_timestamp": None,
+                "drift_trajectory": [],
+                "error": "Sentinel-1 acquisition timestamp unavailable.",
+            },
+            "vessels": [],
+            "feature2": {
+                "status": "DATA_UNAVAILABLE",
+                "error": "Sentinel-1 acquisition timestamp unavailable.",
+                "origin": {},
+                "forecast": {},
+                "geojson": {"type": "FeatureCollection", "features": []},
+            },
+            "attribution_status": "SKIPPED_ENVIRONMENT_DATA_UNAVAILABLE",
+            "attribution_message": "Feature 3 attribution skipped: Environmental origin context is unavailable from Feature 2.",
+            "processed_at": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        }
+
     # Step 3: Feature 2 — Origin Tracing & Trajectory Forecasting
     logger.info(
         f"Pipeline Step 3: Passing coordinates to Feature 2 for case {case_id}: "
         f"effective_lat={effective_lat}, effective_lon={effective_lon}, "
-        f"geospatial_metadata_detected={spill_res.get('geospatial_metadata_detected')}"
+        f"geospatial_metadata_detected={spill_res.get('geospatial_metadata_detected')}, "
+        f"observation_time={spill_res.get('observation_time')}"
     )
     feature2_res = _run_feature2_pipeline(case_id, spill_res, effective_lat, effective_lon)
 

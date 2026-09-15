@@ -112,6 +112,10 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         self._active_filepath: Optional[str] = None
         self._source_type: str = "uninitialized"
         self._cache_status: str = "none"
+        self._requested_bbox: Optional[Dict[str, float]] = None
+        self._requested_time: Optional[Dict[str, str]] = None
+        self._spatially_matched: Optional[bool] = None
+        self._temporally_matched: Optional[bool] = None
 
         # Initialize reader if local data path is present
         if self.data_path and os.path.exists(self.data_path):
@@ -126,7 +130,10 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         """Returns provenance metadata for the active ocean currents dataset."""
         return {
             "source": "Copernicus Marine Service",
+            "model_source": "Copernicus Global Ocean Physics Analysis and Forecast",
+            "access_provider": "Copernicus Marine Toolbox",
             "product": self.config.dataset_id,
+            "dataset_id": self.config.dataset_id,
             "variables": [self.config.u_var, self.config.v_var],
             "units": "m/s",
             "selected_depth_m": self.config.depth_level_m,
@@ -135,6 +142,13 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
             "source_type": self._source_type,
             "cache_status": self._cache_status,
             "active_filepath": self._active_filepath,
+            "temporal_resolution": "P1D (daily-mean; interpolated to 600s simulation steps)",
+            "spatial_resolution": "0.083 degree (~9 km)",
+            "used_in_numerical_simulation": True,
+            "spatially_matched": self._spatially_matched if self._spatially_matched is not None else (True if self.reader else False),
+            "temporally_matched": self._temporally_matched if self._temporally_matched is not None else (True if self.reader else False),
+            "requested_spatial_domain": self._requested_bbox,
+            "requested_temporal_domain": self._requested_time,
             "spatial_domain": {
                 "min_lat": self.reader.min_lat if self.reader else None,
                 "max_lat": self.reader.max_lat if self.reader else None,
@@ -166,11 +180,18 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
     def build_subset_request(self, window: Any) -> Dict[str, Any]:
         """
         Constructs parameter payload for Copernicus Marine Data Store subsetting API.
+        Dynamically selects Multi-Year Reanalysis dataset when querying dates prior to 2022.
         """
         from ..domain import extract_query_bounds
         min_lat, max_lat, min_lon, max_lon, start_time, end_time = extract_query_bounds(window, mode="historical")
+
+        dataset_id = self.config.dataset_id
+        # When querying historical dates prior to operational coverage (2022-06-01), use reanalysis dataset
+        if start_time < datetime(2022, 6, 1, tzinfo=timezone.utc) and "anfc" in dataset_id:
+            dataset_id = os.getenv("COPERNICUS_REANALYSIS_DATASET_ID", "cmems_mod_glo_phy_my_0.083deg_P1D-m")
+
         return {
-            "dataset_id": self.config.dataset_id,
+            "dataset_id": dataset_id,
             "variables": [self.config.u_var, self.config.v_var],
             "minimum_latitude": min_lat,
             "maximum_latitude": max_lat,
@@ -182,6 +203,25 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
             "maximum_depth": self.config.depth_level_m,
         }
 
+    def _verify_matching(self, min_lat: float, max_lat: float, min_lon: float, max_lon: float, start_time: datetime, end_time: datetime) -> None:
+        """Verifies actual loaded NetCDF spatial and temporal coverage against requested bounds."""
+        if self.reader is None:
+            self._spatially_matched = False
+            self._temporally_matched = False
+            return
+
+        tol = 0.085
+        self._spatially_matched = bool(
+            self.reader.min_lat <= min_lat + tol and
+            self.reader.max_lat >= max_lat - tol and
+            self.reader.min_lon <= min_lon + tol and
+            self.reader.max_lon >= max_lon - tol
+        )
+        self._temporally_matched = bool(
+            self.reader.min_time <= start_time and
+            self.reader.max_time >= end_time
+        )
+
     def fetch_grid(self, window: EnvironmentalQueryWindow) -> bool:
         """
         Prepares or caches the gridded Copernicus current field for target spacetime window.
@@ -190,8 +230,12 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         from ..domain import extract_query_bounds
         min_lat, max_lat, min_lon, max_lon, start_time, end_time = extract_query_bounds(window, mode="historical")
 
+        self._requested_bbox = {"min_lat": min_lat, "max_lat": max_lat, "min_lon": min_lon, "max_lon": max_lon}
+        self._requested_time = {"start": start_time.isoformat(), "end": end_time.isoformat()}
+
         # Case 1: Active local dataset already loaded
         if self.reader is not None:
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             try:
                 self.reader.validate_domain_coverage(window, mode="historical")
                 return True
@@ -202,6 +246,7 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         # Case 2: Configured local data path
         if self.data_path and os.path.exists(self.data_path):
             self._init_reader(self.data_path, source_type="local_netcdf", cache_status="direct")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode="historical")
             return True
 
@@ -209,7 +254,7 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         req = self.build_subset_request(window)
         cache_key = generate_cache_key(
             provider_name="copernicus",
-            dataset_id=self.config.dataset_id,
+            dataset_id=req["dataset_id"],
             variables=[self.config.u_var, self.config.v_var],
             min_lat=min_lat,
             max_lat=max_lat,
@@ -223,6 +268,7 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         cached_file = self.cache_manager.get_cached_file("copernicus", cache_key)
         if cached_file:
             self._init_reader(cached_file, source_type="cache", cache_status="hit")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode="historical")
             return True
 
@@ -245,7 +291,6 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         # Execute remote subset download with atomic cache save
         try:
             logger.info(f"[CopernicusCurrentsProvider] Initiating authenticated CMEMS download for key '{cache_key}'")
-            req = self.build_subset_request(window)
 
             def _download_action(tmp_path: str) -> None:
                 output_dir = os.path.dirname(os.path.abspath(tmp_path))
@@ -274,6 +319,7 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
                 _download_action,
             )
             self._init_reader(final_path, source_type="remote_download", cache_status="miss")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode="historical")
             return True
         except Exception as e:
@@ -306,6 +352,13 @@ class CopernicusCurrentsProvider(HistoricalCurrentProvider):
         )
         utc_time = normalize_to_utc(timestamp)
 
+        import math
+        if math.isnan(u_mps) or math.isnan(v_mps):
+            raise EnvironmentalDataUnavailableError(
+                f"Interpolated Copernicus current velocity is NaN at lat={latitude}, lon={longitude}. "
+                "This typically indicates the location is over land or outside the valid dataset domain."
+            )
+
         return CurrentSample(
             u_current_mps=u_mps,
             v_current_mps=v_mps,
@@ -330,7 +383,7 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
         settings: Optional[Feature2Settings] = None,
     ):
         base_cfg = config or CopernicusConfig(
-            dataset_id=os.getenv("COPERNICUS_FORECAST_DATASET_ID", "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m")
+            dataset_id=os.getenv("COPERNICUS_FORECAST_DATASET_ID", "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i")
         )
         self.config = base_cfg
         self.settings = settings or default_settings
@@ -357,6 +410,10 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
         self._active_filepath: Optional[str] = None
         self._source_type: str = "uninitialized"
         self._cache_status: str = "none"
+        self._requested_bbox: Optional[Dict[str, float]] = None
+        self._requested_time: Optional[Dict[str, str]] = None
+        self._spatially_matched: Optional[bool] = None
+        self._temporally_matched: Optional[bool] = None
 
         # Fail-closed check: In production mode, local fixture paths are strictly forbidden unless explicit replay mode is enabled
         if (
@@ -380,7 +437,10 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
     def provenance(self) -> Dict[str, Any]:
         return {
             "source": "Copernicus Marine Service",
+            "model_source": "Copernicus Global Ocean Physics Analysis and Forecast",
+            "access_provider": "Copernicus Marine Toolbox",
             "product": self.config.dataset_id,
+            "dataset_id": self.config.dataset_id,
             "variables": [self.config.u_var, self.config.v_var],
             "units": "m/s",
             "selected_depth_m": self.config.depth_level_m,
@@ -389,6 +449,13 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
             "source_type": self._source_type,
             "cache_status": self._cache_status,
             "active_filepath": self._active_filepath,
+            "temporal_resolution": "P1D (daily-mean; interpolated to 600s simulation steps)",
+            "spatial_resolution": "0.083 degree (~9 km)",
+            "used_in_numerical_simulation": True,
+            "spatially_matched": self._spatially_matched if self._spatially_matched is not None else (True if self.reader else False),
+            "temporally_matched": self._temporally_matched if self._temporally_matched is not None else (True if self.reader else False),
+            "requested_spatial_domain": self._requested_bbox,
+            "requested_temporal_domain": self._requested_time,
             "spatial_domain": {
                 "min_lat": self.reader.min_lat if self.reader else None,
                 "max_lat": self.reader.max_lat if self.reader else None,
@@ -400,6 +467,25 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
                 "end": self.reader.max_time.isoformat() if self.reader else None,
             }
         }
+
+    def _verify_matching(self, min_lat: float, max_lat: float, min_lon: float, max_lon: float, start_time: datetime, end_time: datetime) -> None:
+        """Verifies actual loaded NetCDF spatial and temporal coverage against requested bounds."""
+        if self.reader is None:
+            self._spatially_matched = False
+            self._temporally_matched = False
+            return
+
+        tol = 0.085
+        self._spatially_matched = bool(
+            self.reader.min_lat <= min_lat + tol and
+            self.reader.max_lat >= max_lat - tol and
+            self.reader.min_lon <= min_lon + tol and
+            self.reader.max_lon >= max_lon - tol
+        )
+        self._temporally_matched = bool(
+            self.reader.min_time <= start_time and
+            self.reader.max_time >= end_time
+        )
 
     def _init_reader(self, filepath: str, source_type: str, cache_status: str) -> None:
         """Initializes LocalNetCDFDatasetReader on the given NetCDF file."""
@@ -439,7 +525,11 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
         from ..domain import extract_query_bounds
         min_lat, max_lat, min_lon, max_lon, start_time, end_time = extract_query_bounds(window, mode="forecast")
 
+        self._requested_bbox = {"min_lat": min_lat, "max_lat": max_lat, "min_lon": min_lon, "max_lon": max_lon}
+        self._requested_time = {"start": start_time.isoformat(), "end": end_time.isoformat()}
+
         if self.reader is not None:
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             try:
                 self.reader.validate_domain_coverage(window, mode="forecast")
                 return True
@@ -449,6 +539,7 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
 
         if self.data_path and os.path.exists(self.data_path):
             self._init_reader(self.data_path, source_type="local_netcdf", cache_status="direct")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode="forecast")
             return True
 
@@ -474,6 +565,7 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
         cached_file = self.cache_manager.get_cached_file("copernicus", cache_key, max_age_seconds=forecast_ttl)
         if cached_file:
             self._init_reader(cached_file, source_type="cache", cache_status="hit")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode="forecast")
             return True
 
@@ -519,6 +611,7 @@ class CopernicusForecastCurrentsProvider(ForecastCurrentProvider):
                 _download_action,
             )
             self._init_reader(final_path, source_type="remote_download", cache_status="miss")
+            self._verify_matching(min_lat, max_lat, min_lon, max_lon, start_time, end_time)
             self.reader.validate_domain_coverage(window, mode="forecast")
             return True
         except (TemporalCoverageError, EnvironmentalCoverageError):

@@ -1,5 +1,8 @@
-import React from 'react';
-import { Shield, Radio, ArrowRight, Upload, MapPin, Compass, AlertTriangle, Layers } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  Shield, ArrowRight, Upload, Satellite, Waves, Scale,
+  Zap, FileText, Radio, Crosshair, Target,
+} from 'lucide-react';
 
 interface HeroSectionProps {
   onNavigate: (view: 'home' | 'dashboard' | 'workflow') => void;
@@ -7,51 +10,107 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate, onOpenUpload }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video) {
+      video.play().catch(() => {});
+    }
+  }, []);
+
   return (
-    <section className="relative bg-white pt-8 pb-16 border-b border-gov-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Official Banner Tag */}
-        <div className="mb-6 inline-flex items-center gap-2 px-3 py-1 bg-gov-light border border-gov-border rounded-gov text-xs text-navy-800 font-medium">
-          <Shield className="w-3.5 h-3.5 text-navy-800" />
-          <span>NATIONAL MARITIME DEFENSE &amp; SURVEILLANCE DIRECTORE</span>
-          <span className="text-gray-400">|</span>
-          <span className="text-gov-muted font-mono text-[11px]">CLASSIFICATION: UNCLASSIFIED / OFFICIAL USE</span>
+    <section className="hero-section relative overflow-hidden">
+      {/* ─── Video Background (DO NOT MODIFY) ─── */}
+      <video
+        ref={videoRef}
+        className="hero-video"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+      >
+        <source src="/backgrund_video.mp4" type="video/mp4" />
+      </video>
+
+      {/* ─── Overlay ─── */}
+      <div className="hero-overlay" aria-hidden="true" />
+
+      {/* ─── Content Layer ─── */}
+      <div className="relative z-10 max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 lg:pt-28 pb-8">
+
+        {/* ═══ TOP BADGES ═══ */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 backdrop-blur-sm border border-cyan-500/20 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/90">
+              National Maritime Surveillance
+            </span>
+          </div>
+          <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/40">
+            Satellite &nbsp;+ &nbsp;AI &nbsp;+ &nbsp;Forensics
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          {/* Left Column: Content */}
-          <div className="lg:col-span-7 space-y-6">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-navy-800 tracking-tight leading-tight">
-              AI-assisted Oil Spill Detection and Vessel Attribution for India's Maritime Waters
+        {/* ═══ MAIN GRID ═══ */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-start">
+
+          {/* ──── LEFT COLUMN (7 cols) ──── */}
+          <div className="lg:col-span-7 space-y-5">
+
+            {/* Hero Heading */}
+            <h1 className="text-3xl sm:text-4xl lg:text-[2.9rem] xl:text-[3.4rem] font-extrabold text-white leading-[1.05] tracking-tight max-w-[800px]">
+              AI-assisted Oil Spill{' '}
+              <br className="hidden sm:block" />
+              Detection and Vessel{' '}
+              <br className="hidden sm:block" />
+              Attribution for{' '}
+              <br className="hidden sm:block" />
+              <span className="hero-heading-gradient">India's Maritime Waters</span>
             </h1>
 
-            <p className="text-base sm:text-lg text-gov-muted leading-relaxed font-normal">
-              SlickTrace is the national intelligence grid unifying Earth-observation SAR satellite imagery, 
-              hydrodynamic drift hindcasting models, and automatic identification system (AIS) vessel tracking 
-              to enable rapid environmental response and forensic legal attribution against non-compliant maritime discharges.
+            {/* Cyan Tagline */}
+            <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-cyan-400/80 mt-4 mb-2">
+              — &nbsp;Cleaner Seas &nbsp;| &nbsp;Safer Coasts &nbsp;| &nbsp;A Greener Tomorrow
             </p>
 
-            {/* Official Key Capabilities Tags */}
-            <div className="grid grid-cols-3 gap-3 py-2">
-              <div className="bg-gov-light p-3 border border-gov-border rounded-gov">
-                <p className="text-[11px] font-semibold text-gov-muted uppercase tracking-wider">Detection Mode</p>
-                <p className="text-sm font-bold text-navy-800">SAR Sentinel-1 / Sentinel-2</p>
+            {/* ═══ THREE FEATURE CARDS ═══ */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 max-w-[750px]">
+              <div className="glass-card group cursor-pointer !p-3" onClick={() => onNavigate('dashboard')}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Satellite className="w-4 h-4 text-cyan-400" />
+                  <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-cyan-400 transition-colors" />
+                </div>
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mb-1">Detection Mode</p>
+                <p className="text-[13px] font-bold text-white leading-tight">SAR Sentinel-1 /<br/>Sentinel-2</p>
               </div>
-              <div className="bg-gov-light p-3 border border-gov-border rounded-gov">
-                <p className="text-[11px] font-semibold text-gov-muted uppercase tracking-wider">Hydrodynamic Engine</p>
-                <p className="text-sm font-bold text-navy-800">18h Origin Backtrack</p>
+
+              <div className="glass-card group cursor-pointer !p-3" onClick={() => onNavigate('dashboard')}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Waves className="w-4 h-4 text-blue-400" />
+                  <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-blue-400 transition-colors" />
+                </div>
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mb-1">Hydrodynamic Engine</p>
+                <p className="text-[13px] font-bold text-white leading-tight">18h Origin Backtrack</p>
               </div>
-              <div className="bg-gov-light p-3 border border-gov-border rounded-gov">
-                <p className="text-[11px] font-semibold text-gov-muted uppercase tracking-wider">Attribution Confidence</p>
-                <p className="text-sm font-bold text-navy-800">Probability Scoring</p>
+
+              <div className="glass-card group cursor-pointer !p-3" onClick={() => onNavigate('dashboard')}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Scale className="w-4 h-4 text-emerald-400" />
+                  <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-emerald-400 transition-colors" />
+                </div>
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mb-1">Attribution Confidence</p>
+                <p className="text-[13px] font-bold text-white leading-tight">Probability Scoring</p>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap items-center gap-4 pt-2">
+            {/* ═══ CTA BUTTONS ═══ */}
+            <div className="flex flex-wrap items-center gap-4 pt-1">
               <button
                 onClick={() => onNavigate('dashboard')}
-                className="px-6 py-3 text-sm font-semibold uppercase tracking-wider text-white bg-navy-800 hover:bg-navy-900 border border-navy-800 rounded-gov shadow-sm transition-all flex items-center gap-2"
+                className="cta-primary"
               >
                 <span>Launch Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
@@ -59,129 +118,93 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate, onOpenUplo
 
               <button
                 onClick={onOpenUpload}
-                className="px-6 py-3 text-sm font-semibold uppercase tracking-wider text-navy-800 bg-white hover:bg-gov-light border border-navy-800 rounded-gov shadow-sm transition-all flex items-center gap-2"
+                className="cta-secondary"
               >
-                <Upload className="w-4 h-4 text-navy-800" />
+                <Upload className="w-4 h-4" />
                 <span>Upload New Case</span>
               </button>
             </div>
 
-            {/* Verification Metadata Footer */}
-            <div className="pt-4 border-t border-gov-border flex items-center space-x-6 text-xs text-gov-muted">
+            {/* ═══ TRUST INDICATORS ═══ */}
+            <div className="flex flex-wrap items-center gap-5 pt-2 text-[11px] text-white/50">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <Shield className="w-3.5 h-3.5 text-emerald-400/70" />
                 Integrated with ISRO Bhuvan Tiles
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-navy-800"></span>
+                <FileText className="w-3.5 h-3.5 text-emerald-400/70" />
                 Court-Admissible Forensic Logs
               </span>
+              <span className="flex items-center gap-1.5">
+                <Zap className="w-3.5 h-3.5 text-cyan-400/70" />
+                Real-time Surveillance
+              </span>
+            </div>
+
+            {/* ═══ BOTTOM STATISTICS BAR ═══ */}
+            <div className="stats-bar mt-8 inline-flex">
+              <div className="stat-item !px-6 !pl-4">
+                <span className="stat-value">24/7</span>
+                <span className="stat-label">Surveillance</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-item !px-6">
+                <span className="stat-value">100m</span>
+                <span className="stat-label">SAR Resolution</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-item !px-6">
+                <span className="stat-value">&lt; 2 hrs</span>
+                <span className="stat-label">Detection to Alert</span>
+              </div>
+              <div className="stat-divider" />
+              <div className="stat-item !px-6 !pr-4">
+                <span className="stat-value">Higher</span>
+                <span className="stat-label">Attribution Confidence</span>
+              </div>
             </div>
           </div>
 
-          {/* Right Column: Operational Briefing Cartographic Panel */}
-          <div className="lg:col-span-5">
-            <div className="bg-navy-900 text-white border-2 border-navy-800 rounded-gov overflow-hidden shadow-md relative">
-              {/* GIS Panel Header */}
-              <div className="bg-navy-800 px-4 py-2.5 flex items-center justify-between border-b border-navy-700 text-xs">
-                <div className="flex items-center space-x-2 font-mono">
-                  <Radio className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-                  <span className="text-amber-400 font-bold">GRID MON-2291</span>
-                  <span className="text-gray-400">|</span>
-                  <span className="text-gray-300">GULF OF KUTCH SURVEILLANCE ZONE</span>
+          {/* ──── RIGHT COLUMN (5 cols) ──── */}
+          <div className="lg:col-span-5 space-y-4 relative h-full min-h-[300px]">
+
+            {/* ═══ SUSPECT VESSEL CARD ═══ */}
+            <div className="suspect-vessel-card lg:absolute lg:top-32 lg:right-24 z-20 shadow-[0_0_15px_rgba(239,68,68,0.1)] border border-red-500/20 bg-[#071422]/80 backdrop-blur-md rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="relative flex items-center justify-center">
+                  <span className="absolute w-full h-full rounded-full bg-red-500/20 animate-ping" />
+                  <Target className="w-4 h-4 text-red-400 relative z-10" />
                 </div>
-                <span className="text-[10px] bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-800 font-mono">
-                  LIVE SATELLITE
-                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">Suspect Vessel</span>
               </div>
-
-              {/* Cartographic GIS View Box */}
-              <div className="relative h-96 bg-[#0a192f] overflow-hidden border-b border-navy-700">
-                {/* Simulated Coastline GIS Map Texture */}
-                <div 
-                  className="absolute inset-0 opacity-40 bg-cover bg-center"
-                  style={{
-                    backgroundImage: `url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1000&q=80')`
-                  }}
-                ></div>
-
-                {/* Ocean Grid Overlay */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#1E293B_1px,transparent_1px),linear-gradient(to_bottom,#1E293B_1px,transparent_1px)] bg-[size:24px_24px] opacity-60"></div>
-
-                {/* Coastline Polygon Path (Vector graphic of Indian West Coast) */}
-                <svg className="absolute inset-0 w-full h-full stroke-emerald-500/50 fill-emerald-950/20" viewBox="0 0 500 400">
-                  <path d="M0,80 Q120,90 200,160 T350,220 T500,280 L500,0 L0,0 Z" strokeWidth="1.5" />
-                  {/* Maritime Boundary Line */}
-                  <path d="M50,160 L450,320" stroke="#FF9933" strokeWidth="1.5" strokeDasharray="4,4" />
-                </svg>
-
-                {/* Satellite Monitored Slick Polygon */}
-                <div className="absolute top-[42%] left-[45%] w-24 h-12 bg-red-600/40 border-2 border-red-500 rounded-full rotate-[15deg] flex items-center justify-center animate-pulse">
-                  <span className="text-[9px] font-mono text-red-200 bg-red-950/80 px-1 border border-red-500">
-                    SLK-2291 [41.8 km²]
-                  </span>
-                </div>
-
-                {/* Drift Path Vectors */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                  {/* Drift Vector Arrow */}
-                  <defs>
-                    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#38BDF8"/>
-                    </marker>
-                  </defs>
-                  <path d="M 180 140 Q 210 160 235 180" stroke="#38BDF8" strokeWidth="2" strokeDasharray="3,3" markerEnd="url(#arrow)" />
-                  <circle cx="180" cy="140" r="4" fill="#F59E0B" />
-                  <text x="140" y="135" fill="#F59E0B" fontSize="10" fontFamily="monospace">Origin (-18h)</text>
-                </svg>
-
-                {/* Vessel Target 1 (MT Kaveri Star) */}
-                <div className="absolute top-[32%] left-[32%] group cursor-pointer">
-                  <div className="w-3 h-3 bg-red-500 rotate-45 border border-white"></div>
-                  <div className="absolute top-4 left-0 bg-navy-950/90 text-white text-[10px] font-mono p-1 border border-red-500 rounded whitespace-nowrap z-10 shadow">
-                    <p className="font-bold text-red-400">MT KAVERI STAR (92%)</p>
-                    <p className="text-gray-300">MMSI: 419008421 | 12.4 kts</p>
-                  </div>
-                </div>
-
-                {/* Vessel Target 2 (Aegean Trader) */}
-                <div className="absolute top-[22%] left-[65%]">
-                  <div className="w-2.5 h-2.5 bg-amber-400 rotate-45 border border-white"></div>
-                  <div className="absolute top-4 left-0 bg-navy-950/80 text-white text-[9px] font-mono p-1 border border-amber-500/50 rounded whitespace-nowrap">
-                    <span>AEGEAN TRADER (74%)</span>
-                  </div>
-                </div>
-
-                {/* Coordinate Markers & Telemetry */}
-                <div className="absolute bottom-2 left-2 bg-navy-950/90 p-2 rounded border border-navy-700 text-[10px] font-mono space-y-0.5 text-gray-300">
-                  <div className="text-amber-400 font-semibold">LAT: 22° 28' 14" N | LON: 69° 12' 40" E</div>
-                  <div>PASS: Sentinel-1A IW / VV | SENSOR: SAR C-BAND</div>
-                  <div>SURFACE CURRENT: 0.82 m/s @ 214° SW</div>
-                </div>
-
-                {/* North Compass Arrow */}
-                <div className="absolute top-3 right-3 bg-navy-950/80 p-1.5 rounded border border-navy-700 text-gray-300 text-center">
-                  <Compass className="w-5 h-5 text-amber-400 mx-auto" />
-                  <span className="text-[9px] font-mono font-bold">N</span>
-                </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-[10px] font-mono text-white/80">
+                <div><span className="text-white/40">MMSI:</span> 415233000</div>
+                <div><span className="text-white/40">TYPE:</span> OIL TANKER</div>
+                <div><span className="text-white/40">COURSE:</span> 233°</div>
+                <div><span className="text-white/40">SPEED:</span> 12.4 kn</div>
               </div>
-
-              {/* Panel Telemetry Footer */}
-              <div className="bg-navy-950 p-3 flex justify-between items-center text-xs border-t border-navy-800">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span className="text-gray-300 font-mono text-[11px]">DRIFT MODEL HINDCAST MATCH: 98.4%</span>
-                </div>
-                <button 
-                  onClick={() => onNavigate('dashboard')}
-                  className="text-amber-400 hover:text-amber-300 font-semibold text-xs font-mono underline flex items-center gap-1"
-                >
-                  FULL RECONNAISSANCE &rarr;
-                </button>
+              {/* Decorative connector line pointing down towards the ship */}
+              <div className="hidden lg:block absolute -bottom-16 left-1/2 w-px h-16 bg-red-400/50 pointer-events-none" />
+              <div className="hidden lg:block absolute -bottom-20 left-1/2 -translate-x-1/2 w-8 h-8 border border-red-500/70 bg-red-500/20 pointer-events-none flex items-center justify-center">
+                  <Crosshair className="w-4 h-4 text-red-400/80" />
               </div>
             </div>
+
           </div>
         </div>
+
+        {/* ═══ RIGHT-SIDE DECORATIVE TEXT ═══ */}
+        <div className="hidden xl:block absolute right-6 top-1/2 -translate-y-1/2 z-[5] pointer-events-none">
+          <div className="text-[13px] font-bold uppercase tracking-[0.4em] text-white/[0.06] leading-loose text-right">
+            Cleaner<br/>Seas<br/>Safer<br/>Tomorrow
+          </div>
+        </div>
+
+        {/* ═══ VESSEL → SPILL CONNECTION MARKER ═══ */}
+        <div className="hidden lg:block absolute bottom-[220px] left-[48%] z-[5] pointer-events-none">
+          <div className="w-3 h-3 rounded-full border-2 border-cyan-400/40 bg-cyan-400/10 animate-ping" />
+        </div>
+
       </div>
     </section>
   );

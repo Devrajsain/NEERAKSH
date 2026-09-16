@@ -1,5 +1,5 @@
-import React from 'react';
-import { Shield, MapPin, Database, FileText, ArrowRight, Activity, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRight, Moon, Menu, X } from 'lucide-react';
 
 interface HeaderProps {
   currentView: 'home' | 'dashboard' | 'workflow';
@@ -8,145 +8,116 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenUpload }) => {
-  return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gov-border">
-      {/* Official Government Top Bar */}
-      <div className="bg-[#061629] text-white text-xs py-1 px-4 sm:px-8 flex justify-between items-center border-b border-navy-700">
-        <div className="flex items-center space-x-3">
-          <span className="font-semibold tracking-wider text-gray-200">GOVERNMENT OF INDIA</span>
-          <span className="text-gray-500">|</span>
-          <span className="text-gray-300">MINISTRY OF PORTS, SHIPPING AND WATERWAYS</span>
-        </div>
-        <div className="hidden md:flex items-center space-x-4 text-[11px] text-gray-300">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-            NATIONAL MARITIME DEFENSE NETWORK ACTIVE
-          </span>
-          <span>|</span>
-          <button onClick={() => onNavigate('dashboard')} className="hover:text-white transition-colors">
-            SURVEILLANCE GRID v2.4
-          </button>
-        </div>
-      </div>
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-      {/* Main Header Navigation */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Brand & Crest */}
-          <div 
-            className="flex items-center space-x-3 cursor-pointer group"
-            onClick={() => onNavigate('home')}
-          >
-            {/* NEERAKSH Logo */}
-            <img
-              src="/neeraksh_logo.jpg"
-              alt="NEERAKSH"
-              className="w-12 h-12 rounded-full object-cover border-2 border-navy-700 shadow-sm group-hover:opacity-90 transition-opacity"
-            />
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-2xl font-bold tracking-tight text-navy-800 font-sans">
+  const navLinks = [
+    { label: 'Home', action: () => onNavigate('home'), isActive: currentView === 'home' },
+    { label: 'About', action: () => onNavigate('home'), isActive: false },
+    { label: 'Forensic Workflow', action: () => onNavigate('workflow'), isActive: currentView === 'workflow' },
+    { label: 'Surveillance Dashboard', action: () => onNavigate('dashboard'), isActive: currentView === 'dashboard' },
+    { label: 'Upload Case', action: onOpenUpload, isActive: false },
+    { label: 'Contact', action: () => onNavigate('home'), isActive: false },
+  ];
+
+  return (
+    <header className="absolute top-0 left-0 right-0 z-50">
+      <div className="header-glass">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16 lg:h-[72px]">
+            {/* Brand */}
+            <div
+              className="flex items-center space-x-3 cursor-pointer group flex-shrink-0"
+              onClick={() => onNavigate('home')}
+            >
+              <img
+                src="/neeraksh_logo.jpg"
+                alt="NEERAKSH"
+                className="w-10 h-10 rounded-full object-cover border border-cyan-400/30 shadow-sm group-hover:border-cyan-400/60 transition-all"
+              />
+              <div className="hidden sm:block">
+                <span className="text-lg font-bold tracking-tight text-white">
                   NEERAKSH
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider bg-navy-800 text-white px-2 py-0.5 rounded-gov border border-navy-700">
-                  GOV PORTAL
-                </span>
+                <p className="text-[10px] text-white/50 font-medium leading-tight">
+                  Marine Oil Spill Detection &amp; Vessel Attribution System
+                </p>
               </div>
-              <p className="text-xs text-gov-muted font-medium tracking-tight">
-                Marine Oil Spill Detection &amp; Vessel Attribution System
-              </p>
             </div>
-          </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden lg:flex items-center space-x-8">
-            <button
-              onClick={() => onNavigate('home')}
-              className={`text-sm font-semibold tracking-wide transition-colors py-2 border-b-2 ${
-                currentView === 'home'
-                  ? 'text-navy-800 border-navy-800'
-                  : 'text-gov-text hover:text-navy-800 border-transparent hover:border-gov-border'
-              }`}
-            >
-              Home
-            </button>
-            
-            <a 
-              href="#about" 
-              onClick={(e) => {
-                if (currentView !== 'home') onNavigate('home');
-              }}
-              className="text-sm font-medium text-gov-text hover:text-navy-800 py-2 border-b-2 border-transparent hover:border-gov-border transition-colors"
-            >
-              About
-            </a>
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center space-x-1">
+              {navLinks.map((link) => (
+                <button
+                  key={link.label}
+                  onClick={link.action}
+                  className={`px-3 py-2 text-[13px] font-medium transition-all rounded-md ${
+                    link.isActive
+                      ? 'text-white nav-link-active'
+                      : 'text-white/70 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {link.label}
+                </button>
+              ))}
+            </nav>
 
-            <button
-              onClick={() => onNavigate('workflow')}
-              className={`text-sm font-semibold tracking-wide transition-colors py-2 border-b-2 ${
-                currentView === 'workflow'
-                  ? 'text-navy-800 border-navy-800'
-                  : 'text-gov-text hover:text-navy-800 border-transparent hover:border-gov-border'
-              }`}
-            >
-              Forensic Workflow
-            </button>
+            {/* Right Actions */}
+            <div className="flex items-center space-x-3">
+              <button
+                className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all"
+                aria-label="Toggle theme"
+              >
+                <Moon className="w-4 h-4" />
+              </button>
 
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className={`text-sm font-semibold tracking-wide transition-colors py-2 border-b-2 flex items-center gap-1.5 ${
-                currentView === 'dashboard'
-                  ? 'text-navy-800 border-navy-800'
-                  : 'text-gov-text hover:text-navy-800 border-transparent hover:border-gov-border'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-gov-blue" />
-              Surveillance Dashboard
-            </button>
+              <button
+                onClick={() => onNavigate('dashboard')}
+                className="hidden sm:inline-flex items-center gap-2 px-5 py-2 text-xs font-bold uppercase tracking-wider text-white rounded-lg transition-all launch-grid-btn"
+              >
+                <span>Launch Grid</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
 
-            <button
-              onClick={onOpenUpload}
-              className="text-sm font-medium text-gov-text hover:text-navy-800 py-2 border-b-2 border-transparent hover:border-gov-border transition-colors"
-            >
-              Upload Case
-            </button>
-
-            <a 
-              href="#contact" 
-              onClick={(e) => {
-                if (currentView !== 'home') onNavigate('home');
-              }}
-              className="text-sm font-medium text-gov-text hover:text-navy-800 py-2 border-b-2 border-transparent hover:border-gov-border transition-colors"
-            >
-              Contact
-            </a>
-          </nav>
-
-          {/* Action CTAs */}
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onOpenUpload}
-              className="hidden sm:inline-flex items-center justify-center px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-navy-800 bg-white border border-navy-800 rounded-gov hover:bg-gray-50 transition-all shadow-sm"
-            >
-              Upload New Case
-            </button>
-            <button
-              onClick={() => onNavigate('dashboard')}
-              className="inline-flex items-center justify-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white bg-navy-800 rounded-gov hover:bg-navy-900 transition-all shadow-sm gap-2"
-            >
-              <span>Launch Grid</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+              {/* Mobile Menu Toggle */}
+              <button
+                className="lg:hidden w-9 h-9 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-white"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 3px Indian Tricolor Accent Strip */}
-      <div className="w-full flex h-[3px]">
-        <div className="w-1/3 bg-[#FF9933]"></div>
-        <div className="w-1/3 bg-white"></div>
-        <div className="w-1/3 bg-[#138808]"></div>
-      </div>
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-[#061629]/95 backdrop-blur-xl border-t border-white/5">
+          <div className="px-4 py-3 space-y-1">
+            {navLinks.map((link) => (
+              <button
+                key={link.label}
+                onClick={() => { link.action(); setMobileMenuOpen(false); }}
+                className={`block w-full text-left px-4 py-2.5 text-sm rounded-md transition-all ${
+                  link.isActive
+                    ? 'text-cyan-400 bg-white/5'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {link.label}
+              </button>
+            ))}
+            <div className="pt-2 border-t border-white/10">
+              <button
+                onClick={() => { onNavigate('dashboard'); setMobileMenuOpen(false); }}
+                className="w-full px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-white rounded-md launch-grid-btn text-center"
+              >
+                Launch Grid →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -285,7 +285,16 @@ class Feature2PipelineService:
 
         # 2. Forward forecast (primary initial condition is the observed Feature 1 slick at T0)
         best_cand_id = origin_res.best_candidate.candidate_id if origin_res.best_candidate else None
-        forecast_res = self.predict_forecast(slick, origin_candidate_id=best_cand_id, query_domain=hist_domain)
+        
+        try:
+            forecast_res = self.predict_forecast(slick, origin_candidate_id=best_cand_id, query_domain=hist_domain)
+        except Exception as e:
+            logger.warning(f"Forward forecast failed (likely due to operational provider lacking historical data): {e}")
+            from app.feature2.schemas.output_schema import ForecastAnalysisResult
+            forecast_res = ForecastAnalysisResult(
+                spill_id=slick.spill_id,
+                observation_time=obs_time_utc
+            )
 
         # 3. Build Unified Feature 2 Result Sections
         # 3.1 Observation

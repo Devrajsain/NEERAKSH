@@ -117,8 +117,8 @@ def interpolate_position_at_time(
             return {
                 "latitude": r.latitude,
                 "longitude": r.longitude,
-                "sog": r.sog or 0.0,
-                "cog": r.cog or 0.0,
+                "sog": r.sog,
+                "cog": r.cog,
                 "exact": True,
             }, None
 
@@ -147,19 +147,25 @@ def interpolate_position_at_time(
     interp_lat = prev_r.latitude + t * (next_r.latitude - prev_r.latitude)
     interp_lon = prev_r.longitude + t * (next_r.longitude - prev_r.longitude)
     
-    sog_prev = prev_r.sog if prev_r.sog is not None else 0.0
-    sog_next = next_r.sog if next_r.sog is not None else 0.0
-    interp_sog = sog_prev + t * (sog_next - sog_prev)
+    sog_prev = prev_r.sog
+    sog_next = next_r.sog
+    if sog_prev is not None and sog_next is not None:
+        interp_sog = sog_prev + t * (sog_next - sog_prev)
+    else:
+        interp_sog = sog_prev if sog_prev is not None else sog_next
 
-    cog_prev = prev_r.cog if prev_r.cog is not None else 0.0
-    cog_next = next_r.cog if next_r.cog is not None else 0.0
-    interp_cog = cog_prev + t * (cog_next - cog_prev)
+    cog_prev = prev_r.cog
+    cog_next = next_r.cog
+    if cog_prev is not None and cog_next is not None:
+        interp_cog = cog_prev + t * (cog_next - cog_prev)
+    else:
+        interp_cog = cog_prev if cog_prev is not None else cog_next
 
     return {
         "latitude": round(interp_lat, 6),
         "longitude": round(interp_lon, 6),
-        "sog": round(interp_sog, 1),
-        "cog": round(interp_cog, 1),
+        "sog": round(interp_sog, 1) if interp_sog is not None else None,
+        "cog": round(interp_cog, 1) if interp_cog is not None else None,
         "exact": False,
     }, None
 
@@ -179,14 +185,14 @@ def find_closest_approach_to_origin(
             "time": None,
             "lat": 0.0,
             "lon": 0.0,
-            "sog": 0.0,
+            "sog": None,
         }
 
     min_dist = 9999.0
     closest_time = records[0].timestamp
     closest_lat = records[0].latitude
     closest_lon = records[0].longitude
-    closest_sog = records[0].sog or 0.0
+    closest_sog = records[0].sog
 
     for i in range(len(records)):
         curr_r = records[i]
@@ -196,7 +202,7 @@ def find_closest_approach_to_origin(
             closest_time = curr_r.timestamp
             closest_lat = curr_r.latitude
             closest_lon = curr_r.longitude
-            closest_sog = curr_r.sog or 0.0
+            closest_sog = curr_r.sog
 
         # Also test segment projection if consecutive points are within reasonable gap (< 60 min)
         if i > 0:
@@ -214,14 +220,17 @@ def find_closest_approach_to_origin(
                     closest_time = prev_r.timestamp + (curr_r.timestamp - prev_r.timestamp) * t
                     closest_lat = prev_r.latitude + t * (curr_r.latitude - prev_r.latitude)
                     closest_lon = prev_r.longitude + t * (curr_r.longitude - prev_r.longitude)
-                    s_prev = prev_r.sog or 0.0
-                    s_curr = curr_r.sog or 0.0
-                    closest_sog = s_prev + t * (s_curr - s_prev)
+                    s_prev = prev_r.sog
+                    s_curr = curr_r.sog
+                    if s_prev is not None and s_curr is not None:
+                        closest_sog = s_prev + t * (s_curr - s_prev)
+                    else:
+                        closest_sog = s_prev if s_prev is not None else s_curr
 
     return {
         "distance_km": round(min_dist, 3),
         "time": closest_time,
         "lat": round(closest_lat, 6),
         "lon": round(closest_lon, 6),
-        "sog": round(closest_sog, 1),
+        "sog": round(closest_sog, 1) if closest_sog is not None else None,
     }

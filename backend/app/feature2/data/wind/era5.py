@@ -170,6 +170,15 @@ class ERA5WindProvider(HistoricalWindProvider):
 
         year_val = sorted(list(years))[0] if len(years) == 1 else sorted(list(years))
 
+        import math
+        # ERA5 grids are strictly on a 0.25 degree resolution. We proactively pad outward
+        # to ensure the CDS API returns a grid that fully encompasses our exact required bounds.
+        # We round precisely to avoid float artifacts (e.g. 4.250000000001).
+        aligned_north = round(math.ceil(max_lat / 0.25) * 0.25, 4)
+        aligned_south = round(math.floor(min_lat / 0.25) * 0.25, 4)
+        aligned_west = round(math.floor(min_lon / 0.25) * 0.25, 4)
+        aligned_east = round(math.ceil(max_lon / 0.25) * 0.25, 4)
+
         return {
             "product_type": ["reanalysis"],
             "format": "netcdf",
@@ -184,10 +193,10 @@ class ERA5WindProvider(HistoricalWindProvider):
             "day": sorted(list(days)),
             "time": [f"{h:02d}:00" for h in range(24)],
             "area": [
-                max_lat,  # North
-                min_lon,  # West
-                min_lat,  # South
-                max_lon,  # East
+                aligned_north,  # North
+                aligned_west,   # West
+                aligned_south,  # South
+                aligned_east,   # East
             ],
         }
 

@@ -21,7 +21,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({ vessel, onClose, onAud
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-black font-sans truncate">{vessel.name}</h2>
-            {isHighRisk && (
+            {isHighRisk && vessel.scoringMode !== 'BAYESIAN_POSTERIOR' && (
               <span className="px-1.5 py-0.5 bg-red-600 text-white text-[9px] font-bold uppercase rounded flex-shrink-0 shadow-sm border border-red-500">
                 Primary Suspect
               </span>
@@ -52,17 +52,34 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({ vessel, onClose, onAud
           </div>
           
           <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 border border-slate-100 rounded p-2">
-             <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gov-light shadow-inner mb-1">
-               {/* Faux circular progress background */}
-               <svg className="w-full h-full transform -rotate-90 absolute inset-0 text-slate-200" viewBox="0 0 36 36">
-                 <path className="stroke-current stroke-2" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                 <path className={`stroke-2 ${isHighRisk ? 'stroke-red-600' : 'stroke-navy-800'}`} fill="none" strokeDasharray={`${vessel.score}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-               </svg>
-               <span className="text-lg font-black text-navy-900 font-mono absolute">{vessel.score}%</span>
-             </div>
-             <span className="text-[10px] text-gov-muted uppercase font-bold text-center tracking-wider">
-               Attribution<br/>Probability
-             </span>
+             {vessel.scoringMode === 'BAYESIAN_POSTERIOR' ? (
+               <>
+                 <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gov-light shadow-inner mb-1">
+                   <svg className="w-full h-full transform -rotate-90 absolute inset-0 text-slate-200" viewBox="0 0 36 36">
+                     <path className="stroke-current stroke-2" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                     <path className={`stroke-2 stroke-blue-600`} fill="none" strokeDasharray={`${Math.round((vessel.posterior_probability || 0) * 100)}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                   </svg>
+                   <span className="text-lg font-black text-navy-900 font-mono absolute">{Math.round((vessel.posterior_probability || 0) * 100)}%</span>
+                 </div>
+                 <span className="text-[10px] text-gov-muted uppercase font-bold text-center tracking-wider">
+                   Bayesian<br/>Probability
+                 </span>
+               </>
+             ) : (
+               <>
+                 <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gov-light shadow-inner mb-1">
+                   {/* Faux circular progress background */}
+                   <svg className="w-full h-full transform -rotate-90 absolute inset-0 text-slate-200" viewBox="0 0 36 36">
+                     <path className="stroke-current stroke-2" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                     <path className={`stroke-2 ${isHighRisk ? 'stroke-red-600' : 'stroke-navy-800'}`} fill="none" strokeDasharray={`${vessel.score || 0}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                   </svg>
+                   <span className="text-lg font-black text-navy-900 font-mono absolute">{vessel.score || 0}%</span>
+                 </div>
+                 <span className="text-[10px] text-gov-muted uppercase font-bold text-center tracking-wider">
+                   Attribution<br/>Score
+                 </span>
+               </>
+             )}
           </div>
         </div>
 
@@ -72,10 +89,17 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({ vessel, onClose, onAud
             <span className="text-[9px] uppercase text-gov-muted font-bold flex items-center gap-1"><Hash className="w-3 h-3"/> MMSI / IMO</span>
             <span className="font-mono font-semibold text-navy-800">{vessel.mmsi} / {vessel.raw?.imo || 'N/A'}</span>
           </div>
-          <div className="bg-gov-light p-2 rounded flex flex-col border border-gov-border">
-            <span className="text-[9px] uppercase text-gov-muted font-bold flex items-center gap-1"><Navigation className="w-3 h-3"/> Type & Size</span>
-            <span className="font-mono font-semibold text-navy-800 truncate">{vessel.type} • {vessel.raw?.length_m || '?'}x{vessel.raw?.width_m || '?'}m</span>
-          </div>
+          {vessel.scoringMode === 'BAYESIAN_POSTERIOR' ? (
+            <div className="bg-gov-light p-2 rounded flex flex-col border border-gov-border">
+              <span className="text-[9px] uppercase text-gov-muted font-bold flex items-center gap-1"><Hash className="w-3 h-3"/> Candidate ID</span>
+              <span className="font-mono font-semibold text-navy-800 truncate" title={vessel.candidate_id}>{vessel.candidate_id?.substring(0, 8)}...</span>
+            </div>
+          ) : (
+            <div className="bg-gov-light p-2 rounded flex flex-col border border-gov-border">
+              <span className="text-[9px] uppercase text-gov-muted font-bold flex items-center gap-1"><Navigation className="w-3 h-3"/> Type & Size</span>
+              <span className="font-mono font-semibold text-navy-800 truncate">{vessel.type} • {vessel.raw?.length_m || '?'}x{vessel.raw?.width_m || '?'}m</span>
+            </div>
+          )}
         </div>
 
         {/* Evidence Breakdown */}
@@ -84,57 +108,100 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({ vessel, onClose, onAud
             Evidence Breakdown
           </h4>
           
-          <div className="space-y-2">
-            <div>
-              <div className="flex justify-between text-[10px] mb-0.5">
-                <span className="text-slate-600 font-medium">Origin Presence (45%)</span>
-                <span className="font-mono font-bold text-navy-800">{Math.round(vessel.originPresence)}%</span>
+          {vessel.scoringMode === 'BAYESIAN_POSTERIOR' ? (
+            <div className="space-y-2">
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">Bayesian Probability</span>
+                  <span className="font-mono font-bold text-navy-800">{Math.round((vessel.posterior_probability || 0) * 100)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: `${Math.round((vessel.posterior_probability || 0) * 100)}%` }}></div>
+                </div>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.originPresence)}%` }}></div>
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">Bayesian Prior</span>
+                  <span className="font-mono font-bold text-navy-800">{Math.round((vessel.raw?.prior_probability || 0) * 100)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-slate-400 transition-all duration-500" style={{ width: `${Math.round((vessel.raw?.prior_probability || 0) * 100)}%` }}></div>
+                </div>
               </div>
+              <div className="flex justify-between text-[10px] bg-gov-light p-2 mt-2 border border-gov-border rounded">
+                <span className="text-slate-600 font-medium">Release Origin</span>
+                <span className="font-mono font-bold text-navy-800">{vessel.raw?.release_latitude?.toFixed(4)}, {vessel.raw?.release_longitude?.toFixed(4)}</span>
+              </div>
+              <div className="flex justify-between text-[10px] bg-gov-light p-2 mt-1 border border-gov-border rounded">
+                <span className="text-slate-600 font-medium">Release Time</span>
+                <span className="font-mono font-bold text-navy-800">{vessel.raw?.release_timestamp ? new Date(vessel.raw.release_timestamp).toLocaleString() : 'N/A'}</span>
+              </div>
+              
+              {vessel.compositeScore !== undefined && (
+                <div className="bg-indigo-50 p-2 rounded border border-indigo-100 mt-2">
+                  <span className="text-[9px] uppercase text-indigo-800 font-bold flex items-center gap-1 mb-1">
+                    Supplemental Evidence (Feature 3)
+                  </span>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-indigo-600 font-medium">Feature 3 Score</span>
+                    <span className="font-mono font-bold text-indigo-900">{Math.round(vessel.compositeScore || 0)}%</span>
+                  </div>
+                </div>
+              )}
             </div>
+          ) : (
+            <div className="space-y-2">
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">Origin Presence (45%)</span>
+                  <span className="font-mono font-bold text-navy-800">{Math.round(vessel.originPresence)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.originPresence)}%` }}></div>
+                </div>
+              </div>
 
-            <div>
-              <div className="flex justify-between text-[10px] mb-0.5">
-                <span className="text-slate-600 font-medium">Behavior Anomaly (20%)</span>
-                <span className="font-mono font-bold text-navy-800">{Math.round(vessel.behaviorAnomaly)}%</span>
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">Behavior Anomaly (20%)</span>
+                  <span className="font-mono font-bold text-navy-800">{Math.round(vessel.behaviorAnomaly)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.behaviorAnomaly)}%` }}></div>
+                </div>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.behaviorAnomaly)}%` }}></div>
-              </div>
-            </div>
 
-            <div>
-              <div className="flex justify-between text-[10px] mb-0.5">
-                <span className="text-slate-600 font-medium">Dwell Duration (15%)</span>
-                <span className="font-mono font-bold text-navy-800">{Math.round(vessel.dwellTime)}%</span>
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">Dwell Duration (15%)</span>
+                  <span className="font-mono font-bold text-navy-800">{Math.round(vessel.dwellTime)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.dwellTime)}%` }}></div>
+                </div>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.dwellTime)}%` }}></div>
-              </div>
-            </div>
 
-            <div>
-              <div className="flex justify-between text-[10px] mb-0.5">
-                <span className="text-slate-600 font-medium">Drift Match (10%)</span>
-                <span className="font-mono font-bold text-navy-800">{vessel.approachDeparture != null ? Math.round(vessel.approachDeparture) : 0}%</span>
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">Drift Match (10%)</span>
+                  <span className="font-mono font-bold text-navy-800">{vessel.approachDeparture != null ? Math.round(vessel.approachDeparture) : 0}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${vessel.approachDeparture != null ? Math.min(100, vessel.approachDeparture) : 0}%` }}></div>
+                </div>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${vessel.approachDeparture != null ? Math.min(100, vessel.approachDeparture) : 0}%` }}></div>
-              </div>
-            </div>
 
-            <div>
-              <div className="flex justify-between text-[10px] mb-0.5">
-                <span className="text-slate-600 font-medium">AIS Dark Gap (10%)</span>
-                <span className="font-mono font-bold text-navy-800">{Math.round(vessel.aisGap)}%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
-                <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.aisGap)}%` }}></div>
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span className="text-slate-600 font-medium">AIS Dark Gap (10%)</span>
+                  <span className="font-mono font-bold text-navy-800">{Math.round(vessel.aisGap)}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50">
+                  <div className="h-full bg-navy-700 transition-all duration-500" style={{ width: `${Math.min(100, vessel.aisGap)}%` }}></div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Quick Stats Cards */}
@@ -154,7 +221,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({ vessel, onClose, onAud
              </div>
              <div className="bg-slate-50 border border-slate-200 rounded p-1.5 text-center flex flex-col justify-center">
                <span className="text-[8px] text-slate-500 uppercase font-bold">SOG (Org)</span>
-               <span className="font-mono font-bold text-navy-900 text-[11px]">{ev.sog_at_origin_kn || '—'} kn</span>
+               <span className="font-mono font-bold text-navy-900 text-[11px]">{ev.sog_at_origin_kn ?? '—'} kn</span>
              </div>
           </div>
         )}

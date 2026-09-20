@@ -38,6 +38,18 @@ class MockCurrentsProvider(HistoricalCurrentProvider):
     def provider_name(self) -> str:
         return "mock_currents"
 
+    @property
+    def mock_reader(self):
+        try:
+            from opendrift.readers.reader_constant import Reader
+            return Reader({'x_sea_water_velocity': self.const_u, 'y_sea_water_velocity': self.const_v})
+        except ImportError:
+            return None
+
+    @property
+    def active_filepath(self) -> Optional[str]:
+        return None
+
     def fetch_grid(self, window: EnvironmentalQueryWindow) -> bool:
         return True
 

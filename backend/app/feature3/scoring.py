@@ -141,15 +141,15 @@ def compute_behavior_anomaly_score(
     else:
         # Insufficient baseline: evaluate absolute kinematic metrics near event without claiming baseline certainty
         flags.append("BASELINE_INSUFFICIENT")
-        event_median = sorted(event_sogs)[len(event_sogs) // 2] if event_sogs else 0.0
-        metrics["event_median_sog_kn"] = round(event_median, 1)
+        event_median = sorted(event_sogs)[len(event_sogs) // 2] if event_sogs else None
+        metrics["event_median_sog_kn"] = round(event_median, 1) if event_median is not None else None
 
         raw_score = 0.0
         # If speed is unusually low near origin (< 4 knots for commercial vessel)
         if min_sog is not None and min_sog <= 4.0 and (min_distance_km <= 8.0 or inside_zone):
             raw_score += 65.0
             flags.append("LOITERING_SPEED_NEAR_ORIGIN")
-        elif event_median <= 6.0 and min_distance_km <= 10.0:
+        elif event_median is not None and event_median <= 6.0 and min_distance_km <= 10.0:
             raw_score += 45.0
 
         if max_cog_change >= 45.0:

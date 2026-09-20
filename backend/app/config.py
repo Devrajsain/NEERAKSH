@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
     
     # Folders
-    UPLOAD_DIR: str = "./uploads"
-    OUTPUT_DIR: str = "./outputs"
+    UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+    OUTPUT_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "outputs")
 
     model_config = SettingsConfigDict(
         env_file=".env",

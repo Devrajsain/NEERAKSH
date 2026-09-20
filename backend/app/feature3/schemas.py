@@ -108,7 +108,7 @@ class RawEvidenceMetrics(BaseModel):
     closest_approach_time: Optional[datetime] = Field(None, description="Timestamp of closest approach")
     time_offset_minutes: float = Field(..., description="Temporal difference from T_origin or release window boundary in minutes")
     inside_uncertainty_zone: bool = Field(default=False, description="Whether vessel entered the Feature 2 spatial uncertainty polygon")
-    position_at_origin: Optional[Dict[str, float]] = Field(None, description="Interpolated lat/lon position at T_origin if valid")
+    position_at_origin: Optional[Dict[str, Any]] = Field(None, description="Interpolated lat/lon position at T_origin if valid")
     sog_at_origin_kn: Optional[float] = Field(None, description="SOG at closest approach or T_origin in knots")
     baseline_median_sog_kn: Optional[float] = Field(None, description="Pre-event / outer-transit median SOG in knots")
     event_median_sog_kn: Optional[float] = Field(None, description="Median SOG near origin in knots")
@@ -145,8 +145,8 @@ class VesselAttributionResult(BaseModel):
     explanation: str = Field(..., description="Comprehensive explainability forensic narrative")
     current_latitude: float
     current_longitude: float
-    heading_deg: float
-    speed_kts: str
+    heading_deg: Optional[float] = None
+    speed_kts: Optional[float] = None
     trajectory_geojson: Optional[Dict[str, Any]] = None
 
 

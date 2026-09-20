@@ -78,7 +78,7 @@ export interface VesselResponse {
   current_latitude: number;
   current_longitude: number;
   heading_deg: number;
-  speed_kts: string;
+  speed_kts?: number | null;
 
   // Feature 3 Extended Evidence Attributes
   composite_score?: number;
@@ -142,6 +142,7 @@ export async function createCase(
   centerLongitude?: number | null,
   imageFile?: File | null,
   csvFile?: File | null,
+  testMode: boolean = false,
 ): Promise<CaseResponse> {
   const formData = new FormData();
   formData.append('name', name);
@@ -159,14 +160,37 @@ export async function createCase(
   if (csvFile) {
     formData.append('csv_file', csvFile);
   }
+  if (testMode) {
+    formData.append('test_mode', 'true');
+  }
 
-  const res = await fetch(`${API_BASE}/cases/`, {
+  const url = `${API_BASE}/cases/`;
+  console.log("=== DEBUG REQUEST ===");
+  console.log("URL:", url);
+  console.log("FormData Keys:");
+  for (let [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      console.log(`- ${key}: File(name="${value.name}", type="${value.type}", size=${value.size})`);
+    } else {
+      console.log(`- ${key}: ${value}`);
+    }
+  }
+  console.log("test_mode (raw boolean passed):", testMode);
+  // observation_time is not being passed to this function or appended to FormData!
+  console.log("observation_time: NOT PROVIDED IN FRONTEND CODE");
+  console.log("=====================");
+
+  const res = await fetch(url, {
     method: 'POST',
     body: formData,
   });
 
   if (!res.ok) {
     const errorBody = await res.text().catch(() => '');
+    console.error("=== DEBUG RESPONSE ERROR ===");
+    console.error("HTTP Status:", res.status, res.statusText);
+    console.error("Raw Response Body:", errorBody);
+    console.error("============================");
     throw new Error(`Failed to create case: ${res.status} ${errorBody}`);
   }
 
@@ -267,5 +291,197 @@ export async function loadDashboardData(caseId: string): Promise<DashboardCaseDa
     spill,
     vessels,
     feature2,
+  };
+}
+
+export interface ConfidenceDiagnostic {
+  name: string;
+  value: any;
+  threshold?: any;
+  status: 'PASS' | 'FAIL' | 'WARNING' | 'INDETERMINATE';
+  message: string;
+}
+
+export interface ConfidenceFlag {
+  flag: string;
+  severity: 'INFO' | 'WARNING' | 'CRITICAL';
+  description: string;
+}
+
+export interface SupplementalDeterministicEvidence {
+  feature3_overall_score?: number | null;
+  metrics: any;
+  risk_class?: string | null;
+}
+
+export interface FinalCandidateRecord {
+  candidate_id: string;
+  mmsi: string;
+  release_latitude: number;
+  release_longitude: number;
+  release_timestamp: string;
+  
+  evaluation_status: string;
+  prior_probability: number;
+  likelihood: number;
+  posterior_probability: number;
+  
+  confidence_level: string;
+  confidence_diagnostics: ConfidenceDiagnostic[];
+  confidence_flags: ConfidenceFlag[];
+  
+  supplemental_deterministic_evidence?: SupplementalDeterministicEvidence;
+}
+
+export interface AttributionProvenance {
+  environmental_data_provider?: string | null;
+  simulation_engine?: string | null;
+  bayesian_configuration: any;
+  truncation_metadata: any;
+}
+
+export interface FinalAttributionReport {
+  spill_id: string;
+  report_timestamp: string;
+  status: 'SUCCESS' | 'NO_POSITIVE_LIKELIHOOD' | 'VALIDATION_ERROR';
+  
+  hypothesis_space_truncated: boolean;
+  candidate_limit?: number | null;
+  total_valid_candidates?: number | null;
+  returned_candidate_count: number;
+  evaluated_candidate_count: number;
+  unavailable_candidate_count: number;
+  unavailable_candidate_ids: string[];
+  prior_mode: string;
+  
+  normalization_constant: number;
+  log_normalization_constant: number;
+  posterior_sum: number;
+  
+  candidates: FinalCandidateRecord[];
+  
+  provenance: AttributionProvenance;
+  limitations: string[];
+  warnings: string[];
+  errors: string[];
+}
+
+export interface BayesianPipelineRequest {
+  spill_id: string;
+  observation_timestamp: string;
+  observation_geometry: any;
+  candidate_limit?: number;
+  include_feature3: boolean;
+}
+
+/** Execute production attribution pipeline. */
+export async function executeAttributionPipeline(caseId: string): Promise<FinalAttributionReport> {
+  const res = await fetch(`${API_BASE}/bayesian/attribution_pipeline_by_case/${caseId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.text().catch(() => '');
+    throw new Error(`Attribution pipeline failed: ${res.status} ${errorBody}`);
+  }
+
+  return res.json();
+}
+
+/** Deterministic demo mock for frontend testing, strictly adhering to the schema. */
+export async function executeAttributionPipelineDemo(request: BayesianPipelineRequest): Promise<FinalAttributionReport> {
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  return {
+    spill_id: request.spill_id || "demo-spill-001",
+    report_timestamp: new Date().toISOString(),
+    status: "SUCCESS",
+    hypothesis_space_truncated: true,
+    candidate_limit: request.candidate_limit || 10,
+    total_valid_candidates: 45,
+    returned_candidate_count: 3,
+    evaluated_candidate_count: 2,
+    unavailable_candidate_count: 1,
+    unavailable_candidate_ids: ["cand_333333333_unavail"],
+    prior_mode: "UNIFORM_OVER_RETURNED_CANDIDATES",
+    normalization_constant: 1e-15,
+    log_normalization_constant: -34.53,
+    posterior_sum: 1.0,
+    provenance: {
+      environmental_data_provider: "Copernicus Marine / ERA5 (Demo Mock)",
+      simulation_engine: "OpenDrift / OpenOil",
+      bayesian_configuration: { sigma_km: 10, time_tolerance_hours: 2 },
+      truncation_metadata: { strategy: "Proximity First" }
+    },
+    limitations: ["DEMO SYNTHETIC DATA ONLY. Do not use for real operations.", "Truncation applied to hypothesis space."],
+    warnings: ["Environmental drift data simulated for demo mode."],
+    errors: [],
+    candidates: [
+      {
+        candidate_id: "cand_111111111_t1",
+        mmsi: "111111111",
+        release_latitude: 55.25,
+        release_longitude: 4.10,
+        release_timestamp: "2018-08-03T10:00:00Z",
+        evaluation_status: "SUCCESS",
+        prior_probability: 0.3333,
+        likelihood: 1.5e-15,
+        posterior_probability: 0.75,
+        confidence_level: "INDETERMINATE",
+        confidence_diagnostics: [
+          { name: "particle_retention", value: 95.0, status: "PASS", message: "95% of ensemble retained." }
+        ],
+        confidence_flags: [],
+        supplemental_deterministic_evidence: {
+          feature3_overall_score: 82.5,
+          metrics: { closest_approach_distance_km: 1.2 },
+          risk_class: "HIGH"
+        }
+      },
+      {
+        candidate_id: "cand_111111111_t2",
+        mmsi: "111111111",
+        release_latitude: 55.20,
+        release_longitude: 4.15,
+        release_timestamp: "2018-08-03T08:30:00Z",
+        evaluation_status: "SUCCESS",
+        prior_probability: 0.3333,
+        likelihood: 0.5e-15,
+        posterior_probability: 0.25,
+        confidence_level: "INDETERMINATE",
+        confidence_diagnostics: [
+          { name: "particle_retention", value: 45.0, status: "WARNING", message: "Only 45% of ensemble retained." }
+        ],
+        confidence_flags: [
+          { flag: "HIGH_STRANDING", severity: "WARNING", description: "Significant particles hit coastline." }
+        ],
+        supplemental_deterministic_evidence: {
+          feature3_overall_score: 45.0,
+          metrics: { closest_approach_distance_km: 5.4 },
+          risk_class: "MODERATE"
+        }
+      },
+      {
+        candidate_id: "cand_333333333_unavail",
+        mmsi: "333333333",
+        release_latitude: 55.40,
+        release_longitude: 4.00,
+        release_timestamp: "2018-08-03T11:00:00Z",
+        evaluation_status: "EVALUATION_UNAVAILABLE",
+        prior_probability: 0.3333,
+        likelihood: 0.0,
+        posterior_probability: 0.0,
+        confidence_level: "INDETERMINATE",
+        confidence_diagnostics: [],
+        confidence_flags: [],
+        supplemental_deterministic_evidence: {
+          feature3_overall_score: null,
+          metrics: {},
+          risk_class: "UNAVAILABLE"
+        }
+      }
+    ]
   };
 }

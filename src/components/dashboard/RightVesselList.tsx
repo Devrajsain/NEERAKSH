@@ -62,14 +62,24 @@ export const RightVesselList: React.FC<RightVesselListProps> = ({ vessels, onSel
       {!isCollapsed && (
         <div className="overflow-y-auto max-h-[calc(100vh-160px)] sm:max-h-[420px] p-2 space-y-1.5">
           {vessels.map((vessel, idx) => {
-            const isSelected = selectedVesselMmsi === vessel.mmsi;
-            const riskBadgeStyle = getRiskBadgeStyle(vessel.riskClass);
-            const confidenceLabel = getConfidenceLevel(vessel.score);
+            const isBayesian = vessel.scoringMode === 'BAYESIAN_POSTERIOR';
+            const vesselId = isBayesian && vessel.candidate_id ? vessel.candidate_id : vessel.mmsi;
+            const isSelected = selectedVesselMmsi === vesselId;
+            const riskBadgeStyle = getRiskBadgeStyle(vessel.riskClass || 'LOW');
+            
+            // For Bayesian, use posterior probability. For Legacy, use score.
+            const displayPercentage = isBayesian && vessel.posterior_probability !== undefined
+              ? (vessel.posterior_probability * 100).toFixed(1)
+              : vessel.score;
+
+            const confidenceLabel = isBayesian
+              ? (vessel.confidence_level ?? "INDETERMINATE")
+              : (vessel.confidence_level || getConfidenceLevel(vessel.score || 0));
 
             return (
               <div 
-                key={vessel.mmsi}
-                onClick={() => onSelectVessel(vessel.mmsi)}
+                key={vesselId}
+                onClick={() => onSelectVessel(vesselId)}
                 className={`p-2 rounded-gov border cursor-pointer transition-all ${
                   isSelected
                     ? 'border-navy-800 bg-navy-800/10 ring-1 ring-navy-800 shadow-sm'
@@ -77,37 +87,56 @@ export const RightVesselList: React.FC<RightVesselListProps> = ({ vessels, onSel
                 }`}
               >
                 <div className="flex items-center gap-2.5">
-                  {/* Rank badge with vessel route color */}
+                  {/* Color swatch (no rank if Bayesian) */}
                   <span 
                     className="w-5 h-5 flex-shrink-0 rounded flex items-center justify-center text-[10px] font-bold text-white shadow-xs"
                     style={{ background: vessel.color }}
                   >
-                    #{idx + 1}
+                    {!isBayesian && `#${idx + 1}`}
                   </span>
                   
                   {/* Vessel info */}
                   <div className="flex-1 min-w-0">
                     <h4 className="text-[11px] font-bold text-navy-800 truncate" title={vessel.name}>
-                      {vessel.name}
+                      {vessel.name || `Candidate ${vessel.mmsi}`}
                     </h4>
                     <p className="text-[9px] text-gov-muted font-mono truncate">
-                      MMSI {vessel.mmsi}
+                      MMSI {vessel.mmsi} {isBayesian && <span className="ml-1 text-slate-400">ID: {vessel.candidate_id?.substring(0, 8)}...</span>}
                     </p>
                   </div>
 
                   {/* Confidence & Risk */}
                   <div className="flex flex-col items-end flex-shrink-0">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-xs font-mono font-bold text-navy-800 leading-none">
-                        {vessel.score}%
+                    {isBayesian ? (
+                      <>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] text-gov-muted uppercase font-semibold">Posterior:</span>
+                          <span className="text-xs font-mono font-bold text-navy-800 leading-none">
+                            {displayPercentage}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-[8px] text-gov-muted uppercase font-semibold">Conf:</span>
+                          <span className="text-[8px] font-bold text-navy-800 leading-none">
+                            {confidenceLabel}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xs font-mono font-bold text-navy-800 leading-none">
+                          {displayPercentage}%
+                        </span>
+                        <span className="text-[8px] font-medium text-gov-muted leading-none">
+                          {confidenceLabel}
+                        </span>
+                      </div>
+                    )}
+                    {!isBayesian && vessel.riskClass && (
+                      <span className={`px-1.5 py-0.5 mt-1 rounded text-[7px] font-bold uppercase tracking-wider leading-none ${riskBadgeStyle}`}>
+                        {vessel.riskClass}
                       </span>
-                      <span className="text-[8px] font-medium text-gov-muted leading-none">
-                        {confidenceLabel}
-                      </span>
-                    </div>
-                    <span className={`px-1.5 py-0.5 mt-1 rounded text-[7px] font-bold uppercase tracking-wider leading-none ${riskBadgeStyle}`}>
-                      {vessel.riskClass}
-                    </span>
+                    )}
                   </div>
                 </div>
               </div>

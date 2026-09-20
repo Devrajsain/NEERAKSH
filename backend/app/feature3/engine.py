@@ -341,10 +341,10 @@ def run_feature3_engine(
             departure_alignment_deg=drift_metrics.get("departure_alignment_deg"),
         )
 
-        # Vessel Metadata
-        v_name = all_vessel_records[0].vessel_name or f"Vessel {mmsi}"
-        v_type = all_vessel_records[0].vessel_type or "Commercial Cargo/Tanker"
-        v_flag = all_vessel_records[0].flag or "International"
+        # Vessel Metadata (scan for first non-null value)
+        v_name = next((r.vessel_name for r in all_vessel_records if r.vessel_name), f"Vessel {mmsi}")
+        v_type = next((r.vessel_type for r in all_vessel_records if r.vessel_type), "Commercial Cargo/Tanker")
+        v_flag = next((r.flag for r in all_vessel_records if r.flag), "International")
 
         last_pt = all_vessel_records[-1]
 
@@ -390,8 +390,8 @@ def run_feature3_engine(
             explanation=explanation,
             current_latitude=round(last_pt.latitude, 6),
             current_longitude=round(last_pt.longitude, 6),
-            heading_deg=round(last_pt.cog or 0.0, 1),
-            speed_kts=f"{round(last_pt.sog or 0.0, 1)} kts",
+            heading_deg=round(last_pt.cog, 1) if last_pt.cog is not None else None,
+            speed_kts=round(last_pt.sog, 1) if last_pt.sog is not None else None,
             trajectory_geojson=v_geojson,
         ))
 

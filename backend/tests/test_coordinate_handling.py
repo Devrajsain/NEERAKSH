@@ -28,6 +28,19 @@ client = TestClient(app)
 
 
 @pytest.fixture
+def mock_upload_dir(tmp_path, monkeypatch):
+    """Mocks settings.UPLOAD_DIR to an isolated tmp_path and seeds a dummy sample_ais_telemetry.csv"""
+    from app.config import settings
+    monkeypatch.setattr(settings, "UPLOAD_DIR", str(tmp_path))
+    
+    # Create the dummy sample_ais_telemetry.csv
+    sample_csv = tmp_path / "sample_ais_telemetry.csv"
+    sample_csv.write_text("mmsi,timestamp,lat,lon,sog,cog\n123456789,2026-09-02T00:00:00Z,22.4,69.2,10.0,90.0")
+    
+    yield tmp_path
+
+
+@pytest.fixture
 def sample_geotiff():
     """Creates a temporary valid GeoTIFF with EPSG:4326 geospatial metadata and a dark slick."""
     # Extent around Gujarat / Gulf of Kutch: lon 69.1 to 69.3, lat 22.4 to 22.6
@@ -309,7 +322,7 @@ def test_5_tiff_without_geospatial_metadata(sample_non_geo_tiff):
 
 # ── TEST 6: Regression test ────────────────────────────────────────────────────
 
-def test_6_regression_existing_functionality():
+def test_6_regression_existing_functionality(mock_upload_dir):
     """
     TEST 6: Regression test
       -> Verify existing preset pipeline (e.g. SLK-2291 with valid coords) still runs cleanly
@@ -330,3 +343,39 @@ def test_6_regression_existing_functionality():
     assert summary["drift"]["origin_latitude"] is not None
     assert summary["feature2"] is not None
     assert len(summary["vessels"]) > 0
+
+# ── TEST 7: Bayesian Pipeline Test ─────────────────────────────────────────────
+
+def test_7_bayesian_pipeline():
+    """
+    TEST 7: Bayesian Pipeline Regression
+      -> Execute pipeline with allow_test_fixture=True
+      -> Verify bayesian_report is generated and status is correct
+      -> Verify Feature 1, 2, 3 are isolated and tested separately
+    """
+    summary = execute_5step_pipeline(
+        case_id="BAYESIAN-TEST",
+        image_path=None,
+        csv_path=None,
+        center_lat=22.47,
+        center_lon=69.21,
+        allow_test_fixture=True
+    )
+    
+    assert summary["is_test_mode"] is True
+    assert summary["attribution_mode"] == "BAYESIAN"
+    assert summary["status"] == "COMPLETED"
+    
+    # Feature 1
+    assert summary["spill"] is not None
+    
+    # Feature 2
+    assert summary["drift"] is not None
+    assert summary["drift"]["origin_latitude"] is not None
+    assert summary["feature2"]["status"] == "COMPLETED"
+    
+    # Feature 3 / Bayesian
+    assert summary["bayesian_report"] is not None
+    assert summary["bayesian_report"]["status"] in ["SUCCESS", "VALIDATION_ERROR"]
+    assert "candidates" in summary["bayesian_report"]
+

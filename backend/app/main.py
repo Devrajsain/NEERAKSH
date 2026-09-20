@@ -9,6 +9,7 @@ from app.routers import cases, spills, vessels
 from app.routers.feature2_results import router as feature2_results_router
 from app.feature2.api.routes import router as feature2_router
 from app.feature3.api.routes import router as feature3_router
+from app.bayesian.api.routes import router as bayesian_router
 from app.feature2.exceptions import EnvironmentalDataError
 import os
 import logging
@@ -57,6 +58,7 @@ app.include_router(feature2_results_router, prefix="/api/v1")
 app.include_router(feature2_router, prefix="/api/v1")
 app.include_router(feature2_router)
 app.include_router(feature3_router, prefix="/api/v1/feature3")
+app.include_router(bayesian_router, prefix="/api/v1/bayesian")
 
 # Static mounting for uploads & outputs
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)

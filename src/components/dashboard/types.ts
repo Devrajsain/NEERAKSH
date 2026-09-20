@@ -9,9 +9,13 @@ export interface VesselCandidate {
   mmsi: string;
   type: string;
   flag: string;
-  score: number;
-  compositeScore: number;
-  riskClass: string;
+  score?: number; // legacy score (keep optional or ignore)
+  compositeScore?: number; // legacy
+  riskClass?: string;
+  posterior_probability?: number;
+  confidence_level?: string;
+  supplemental_feature3?: any;
+  candidate_id?: string;
   scoringMode: string;
   originPresence: number;
   behaviorAnomaly: number;
@@ -53,4 +57,6 @@ export interface CurrentDashboardData {
   feature2Data?: any;
   spillInfo?: any;
   activeCase?: string;
+  bayesianUnavailable?: boolean;
+  bayesianReport?: any;
 }

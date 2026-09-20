@@ -732,6 +732,7 @@ class TestTask94P1Hardening(unittest.TestCase):
             self.assertIsNone(mgr.get_cached_file("copernicus", cache_key, max_age_seconds=1800.0))
 
             # Rejecting stale cache triggers remote download attempt (which skips/fails cleanly without credentials)
+            provider._is_authenticated = False
             try:
                 res_stale = provider.fetch_grid(query_win)
                 self.assertFalse(res_stale)

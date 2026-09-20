@@ -21,8 +21,8 @@ class VesselAttribution(Base):
     warning_flags = Column(JSON, nullable=False) # list of string flags
     current_latitude = Column(Float, nullable=False)
     current_longitude = Column(Float, nullable=False)
-    heading_deg = Column(Float, nullable=False)
-    speed_kts = Column(String, nullable=False)
+    heading_deg = Column(Float, nullable=True)
+    speed_kts = Column(Float, nullable=True)
 
     # Feature 3 - Extended Multi-Factor Evidence Scoring fields
     composite_score = Column(Float, nullable=True)

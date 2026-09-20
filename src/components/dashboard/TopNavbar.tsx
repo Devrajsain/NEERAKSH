@@ -9,6 +9,8 @@ interface TopNavbarProps {
   activeCase: string;
   setActiveCase: (id: string) => void;
   handleDeleteCase: (id: string) => void;
+  showAttributionDashboard?: boolean;
+  setShowAttributionDashboard?: (val: boolean) => void;
 }
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
@@ -17,7 +19,9 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   availableCases,
   activeCase,
   setActiveCase,
-  handleDeleteCase
+  handleDeleteCase,
+  showAttributionDashboard = false,
+  setShowAttributionDashboard
 }) => {
   return (
     <header className="bg-white border-b border-gov-border px-4 py-2.5 flex items-center justify-between shadow-xs sticky top-0 z-40">
@@ -84,6 +88,15 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         >
           <span>+ Upload Case</span>
         </button>
+
+        {setShowAttributionDashboard && (
+          <button 
+            onClick={() => setShowAttributionDashboard(!showAttributionDashboard)}
+            className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-gov shadow-xs transition-colors ${showAttributionDashboard ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'}`}
+          >
+            <span>{showAttributionDashboard ? 'Show Map' : 'Bayesian Dashboard'}</span>
+          </button>
+        )}
       </div>
     </header>
   );

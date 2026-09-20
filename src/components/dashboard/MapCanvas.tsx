@@ -64,6 +64,17 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!mapRef.current) return;
+    const observer = new ResizeObserver(() => {
+      if (leafletMap.current) {
+        leafletMap.current.invalidateSize();
+      }
+    });
+    observer.observe(mapRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!mapRef.current || !currentData) return;
 
     if (leafletMap.current) {
@@ -83,6 +94,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         delete (mapRef.current as any)._leaflet_id;
       }
       try {
+        console.log(`[MapCanvas] Initializing map. Container size: ${mapRef.current.clientWidth}x${mapRef.current.clientHeight}`);
         leafletMap.current = L.map(mapRef.current, {
           center: currentData.center,
           zoom: currentData.zoom,
@@ -98,6 +110,9 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
             attribution: '&copy; OpenStreetMap'
           }
         );
+        baseTileLayer.on('tileerror', (event: any) => {
+          console.warn('[MapCanvas] Tile load error:', event.error, event.tile);
+        });
         baseTileLayer.addTo(leafletMap.current);
         L.control.zoom({ position: 'bottomright' }).addTo(leafletMap.current);
         mapLayersGroup.current = L.layerGroup().addTo(leafletMap.current);
@@ -357,8 +372,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       // 4. AIS Vessel Trajectories, Gaps & Markers
       if (layers.ais && currentData.vessels.length > 0) {
         currentData.vessels.forEach((v: any, idx: number) => {
-          const isSelected = selectedEntity.type === 'vessel' && selectedEntity.id === v.mmsi;
-          const muted = isMuted('vessel', v.mmsi);
+          const isBayesian = v.scoringMode === 'BAYESIAN_POSTERIOR';
+          const vesselId = isBayesian && v.candidate_id ? v.candidate_id : v.mmsi;
+          const isSelected = selectedEntity.type === 'vessel' && selectedEntity.id === vesselId;
+          const muted = isMuted('vessel', vesselId);
           const trackColor = v.color;
           const opacity = muted ? 0.35 : 1;
           const shipImgSrc = `/ships/ship_${(idx % 5) + 1}.png`;
@@ -391,7 +408,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
 
                   trackLine.on('click', (e) => {
                     L.DomEvent.stopPropagation(e);
-                    onSelectEntity({ type: 'vessel', id: v.mmsi });
+                    onSelectEntity({ type: 'vessel', id: vesselId });
                   });
                   mapLayersGroup.current?.addLayer(trackLine);
                 }
@@ -431,6 +448,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
                 overflow: visible;
               ">
                 <!-- Rank tag above ship -->
+                ${!isBayesian ? `
                 <div style="
                   position: absolute;
                   top: -8px;
@@ -450,6 +468,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
                   pointer-events: none;
                   line-height: 9px;
                 ">#${idx + 1}</div>
+                ` : ''}
 
                 <!-- Ship image, explicitly constrained to icon px -->
                 <img
@@ -478,7 +497,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           const marker = L.marker([v.lat, v.lng], { icon: vesselIcon });
           marker.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
-            onSelectEntity({ type: 'vessel', id: v.mmsi });
+            onSelectEntity({ type: 'vessel', id: vesselId });
           });
 
           mapLayersGroup.current?.addLayer(marker);

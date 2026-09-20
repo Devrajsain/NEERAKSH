@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, X, CheckCircle, AlertTriangle, FileText, Cpu, Compass, Ship, ArrowRight, Play, RefreshCw, Eye, Download } from 'lucide-react';
-import { createCase, continueCaseFeature2, CaseResponse } from '../services/api';
+import { createCase, continueCaseFeature2, CaseResponse, getCase } from '../services/api';
 
 interface WorkflowUploadModalProps {
   isOpen: boolean;
@@ -8,14 +8,6 @@ interface WorkflowUploadModalProps {
   onSelectCase: (caseId: string) => void;
 }
 
-const inferLocationName = (fileName: string): string => {
-  const lower = fileName.toLowerCase();
-  if (lower.includes('kutch') || lower.includes('slk-2291')) return 'Gulf of Kutch, Gujarat EEZ';
-  if (lower.includes('mumbai') || lower.includes('bombay') || lower.includes('slk-2288')) return 'Mumbai High, Offshore Maharashtra';
-  if (lower.includes('chennai') || lower.includes('ennore') || lower.includes('slk-2274')) return 'Chennai Coast, Bay of Bengal';
-  if (lower.includes('cochin') || lower.includes('kochi')) return 'Cochin Coast, Arabian Sea';
-  return 'Operational Maritime Area';
-};
 
 export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen, onClose, onSelectCase }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
@@ -24,6 +16,7 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
   const [uploadedCsvFile, setUploadedCsvFile] = useState<File | null>(null);
   const [uploadedImageName, setUploadedImageName] = useState<string>('');
   const [uploadedCsvName, setUploadedCsvName] = useState<string>('');
+  const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [processedCase, setProcessedCase] = useState<CaseResponse | null>(null);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
   const [processingStep, setProcessingStep] = useState<string>('');
@@ -67,6 +60,51 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
     }
   };
 
+  const processCaseState = (caseData: CaseResponse) => {
+    const summary = caseData.summary_json || {};
+    let step = 1;
+    let processingMessage = '';
+    
+    if (caseData.status === 'FAILED') {
+      setPipelineError(summary.error || 'Pipeline execution failed during processing.');
+      setIsProcessing(false);
+      setProcessingStep('');
+      return false; // Should not poll
+    }
+
+    if (caseData.status === 'AWAITING_COORDINATES' || summary.spill?.requires_coordinates) {
+      setIsProcessing(false);
+      setProcessingStep('Awaiting geographic coordinates for Feature 2...');
+      setCurrentStep(2);
+      return false; // Should not poll
+    }
+
+    // Determine the furthest step reached based on data presence
+    if (summary.bayesian_report || summary.vessels || summary.attribution_status === 'COMPLETED') {
+      step = 4;
+      processingMessage = 'Attribution complete';
+    } else if (summary.drift && (summary.drift.status === 'COMPLETED' || summary.drift.status === 'DATA_UNAVAILABLE')) {
+      step = 3;
+      processingMessage = 'Computing Feature 3 / Bayesian attribution...';
+    } else if (summary.spill) {
+      step = 2;
+      processingMessage = 'Computing Feature 2 drift backtracking...';
+    }
+
+    setCurrentStep(step);
+    if (processingMessage) {
+      setProcessingStep(processingMessage);
+    }
+
+    if (caseData.status === 'COMPLETED') {
+      setProcessingStep('Pipeline complete!');
+      setIsProcessing(false);
+      return false; // Should not poll
+    }
+
+    return true; // Should poll (status is PENDING or PROCESSING)
+  };
+
   const handleRunPipeline = async () => {
     if (!uploadedImageFile) {
       setPipelineError('Please select a satellite SAR or optical image file to proceed.');
@@ -84,7 +122,7 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
       setCurrentStep(2);
 
       const caseName = uploadedImageName.replace(/\.[^/.]+$/, '') + ' Case';
-      const caseLocation = inferLocationName(uploadedImageName);
+      const caseLocation = 'Unknown Maritime Area';
       const caseResponse = await createCase(
         caseName,
         caseLocation,
@@ -92,42 +130,22 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
         null,
         uploadedImageFile,
         uploadedCsvFile,
+        isTestMode,
       );
 
       setProcessedCase(caseResponse);
       onSelectCase(caseResponse.id);
 
-      // Check if Feature 1 requires user to provide coordinates (JPG/PNG or non-georeferenced TIFF)
-      const spill = caseResponse.summary_json?.spill;
-      const requiresCoords = spill?.requires_coordinates || caseResponse.status === 'AWAITING_COORDINATES';
-
-      if (requiresCoords) {
-        // Stop at Step 2 and wait for user coordinates before calling Feature 2
-        setIsProcessing(false);
-        setProcessingStep('Awaiting geographic coordinates for Feature 2...');
-        return;
+      let caseData = caseResponse;
+      let shouldPoll = processCaseState(caseData);
+      
+      // Polling loop to get real status
+      while (shouldPoll) {
+        await new Promise(r => setTimeout(r, 2000));
+        caseData = await getCase(caseResponse.id);
+        setProcessedCase(caseData);
+        shouldPoll = processCaseState(caseData);
       }
-
-      // If GeoTIFF metadata was detected, show badge briefly before auto-advancing
-      if (spill?.geospatial_metadata_detected) {
-        setProcessingStep('GeoTIFF coordinates detected! Advancing to Feature 2 drift modeling...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-
-      // Step 2 → 3: Drift modeling (Feature 2)
-      setProcessingStep('Hydrodynamic drift backtracking...');
-      setCurrentStep(3);
-      await new Promise(resolve => setTimeout(resolve, 600));
-
-      // Step 3 → 4: AIS vessel correlation
-      setProcessingStep('AIS vessel correlation & attribution...');
-      setCurrentStep(4);
-      await new Promise(resolve => setTimeout(resolve, 400));
-
-      setProcessingStep('Pipeline complete!');
-      setIsProcessing(false);
     } catch (error: any) {
       setPipelineError(error.message || 'Pipeline execution failed');
       setIsProcessing(false);
@@ -155,20 +173,19 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
       setProcessedCase(updatedCase);
       onSelectCase(updatedCase.id);
 
-      // Advance to Step 3 (Feature 2 drift modeling)
-      setCurrentStep(3);
-      await new Promise(resolve => setTimeout(resolve, 600));
-
-      // Advance to Step 4 (Attribution)
-      setProcessingStep('AIS vessel correlation & attribution...');
-      setCurrentStep(4);
-      await new Promise(resolve => setTimeout(resolve, 400));
-
-      setProcessingStep('Pipeline complete!');
-      setIsProcessing(false);
+      let caseData = updatedCase;
+      let shouldPoll = processCaseState(caseData);
+      
+      while (shouldPoll) {
+        await new Promise(r => setTimeout(r, 2000));
+        caseData = await getCase(processedCase.id);
+        setProcessedCase(caseData);
+        shouldPoll = processCaseState(caseData);
+      }
     } catch (err: any) {
       setPipelineError(err.message || 'Failed to execute Feature 2');
       setIsProcessing(false);
+      setProcessingStep('');
     }
   };
 
@@ -332,6 +349,23 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Synthetic Data / Test Mode Checkbox */}
+              <div className="flex items-center space-x-2 mt-4 bg-amber-50 border border-amber-200 rounded p-3">
+                <input
+                  type="checkbox"
+                  id="testModeCheckbox"
+                  checked={isTestMode}
+                  onChange={(e) => setIsTestMode(e.target.checked)}
+                  className="w-4 h-4 text-amber-600 border-amber-300 rounded focus:ring-amber-500 cursor-pointer"
+                />
+                <label htmlFor="testModeCheckbox" className="text-xs font-bold text-amber-900 cursor-pointer">
+                  Synthetic Data / Test Mode
+                </label>
+                <p className="text-[10px] text-amber-700 ml-2">
+                  Check this if you are uploading the demo synthetic TIFF and AIS data to force test-mode Bayesian execution.
+                </p>
               </div>
             </div>
           )}
@@ -586,84 +620,138 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
             <div className="space-y-6">
               <div className="space-y-1">
                 <h4 className="text-base font-bold text-navy-800">
-                  Step 4: AIS Correlation &amp; Suspect Vessel Ranking
+                  {processedCase?.summary_json?.attribution_mode === "BAYESIAN"
+                    ? "Step 4: Bayesian Candidate Hypotheses"
+                    : "Step 4: AIS Correlation & Suspect Vessel Ranking"}
                 </h4>
                 <p className="text-xs text-gov-muted">
-                  {vesselsResult
-                    ? `${vesselsResult.length} candidate vessels evaluated against origin coordinates, speed drop events, course deviations, and AIS silence gaps.`
-                    : 'Evaluating candidate vessels...'}
+                  {processedCase?.summary_json?.attribution_mode === "BAYESIAN"
+                    ? (processedCase?.summary_json?.bayesian_report?.candidates
+                      ? `${processedCase.summary_json.bayesian_report.candidates.length} candidate hypotheses evaluated.`
+                      : 'Evaluating candidate hypotheses...')
+                    : (vesselsResult
+                      ? `${vesselsResult.length} candidate vessels evaluated against origin coordinates, speed drop events, course deviations, and AIS silence gaps.`
+                      : 'Evaluating candidate vessels...')}
                 </p>
               </div>
 
               {/* Suspect Vessels Table */}
               <div className="border border-gov-border rounded-gov overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gov-light text-navy-800 font-bold border-b border-gov-border uppercase tracking-wider text-[10px]">
-                    <tr>
-                      <th className="py-2.5 px-3">Rank / Vessel</th>
-                      <th className="py-2.5 px-3">MMSI / Type</th>
-                      <th className="py-2.5 px-3">Proximity</th>
-                      <th className="py-2.5 px-3">Trajectory</th>
-                      <th className="py-2.5 px-3">Anomalies</th>
-                      <th className="py-2.5 px-3 text-right">Score</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gov-border bg-white">
-                    {(vesselsResult || []).map((v: any, idx: number) => (
-                      <tr key={v.mmsi} className={idx === 0 ? 'bg-red-50/50' : ''}>
-                        <td className="py-3 px-3 font-bold text-navy-800 flex items-center space-x-2">
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white ${
-                            idx === 0 ? 'bg-red-600' : idx === 1 ? 'bg-amber-500' : 'bg-slate-400'
-                          }`}>{idx + 1}</span>
-                          <span>{v.name}</span>
-                        </td>
-                        <td className="py-3 px-3 font-mono text-gov-muted">{v.mmsi} ({v.type})</td>
-                        <td className="py-3 px-3 font-mono text-navy-800">{v.proximity_score}%</td>
-                        <td className="py-3 px-3 font-mono text-navy-800">{v.trajectory_score}%</td>
-                        <td className="py-3 px-3">
-                          <div className="flex flex-wrap gap-1">
-                            {(v.warning_flags || []).map((f: string, fIdx: number) => (
-                              <span 
-                                key={fIdx}
-                                className={`inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded border ${
-                                  f.includes('GAP') || f.includes('DEVIATION')
-                                    ? 'bg-red-100 text-red-800 border-red-200'
-                                    : 'bg-gov-light text-navy-800 border-gov-border'
-                                }`}
-                              >
-                                {f}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className={`py-3 px-3 text-right font-extrabold ${
-                          idx === 0 ? 'text-red-600 text-sm' : idx === 1 ? 'text-amber-600' : 'text-gov-muted'
-                        }`}>
-                          {v.overall_score} / 100
-                        </td>
-                      </tr>
-                    ))}
-                    {vesselsResult && vesselsResult.length === 0 && (
+                {processedCase?.summary_json?.attribution_mode === "BAYESIAN" ? (
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gov-light text-navy-800 font-bold border-b border-gov-border uppercase tracking-wider text-[10px]">
                       <tr>
-                        <td colSpan={6} className="py-6 px-4 text-center text-gov-muted text-xs">
-                          <p className="font-semibold text-navy-800 mb-1">No candidate vessels identified</p>
-                          <p className="text-[11px] text-gov-muted">
-                            {processedCase?.summary_json?.attribution_message ||
-                              'Vessel attribution requires reverse hydrodynamic drift origin coordinates or candidate AIS telemetry in the operational window.'}
-                          </p>
-                        </td>
+                        <th className="py-2.5 px-3">Candidate ID</th>
+                        <th className="py-2.5 px-3">MMSI</th>
+                        <th className="py-2.5 px-3">Release Time</th>
+                        <th className="py-2.5 px-3">Release Coordinates</th>
+                        <th className="py-2.5 px-3">Evaluation Status</th>
+                        <th className="py-2.5 px-3 text-right">Bayesian Posterior</th>
                       </tr>
-                    )}
-                    {!vesselsResult && (
+                    </thead>
+                    <tbody className="divide-y divide-gov-border bg-white">
+                      {(processedCase?.summary_json?.bayesian_report?.candidates || []).map((c: any) => (
+                        <tr key={c.candidate_id}>
+                          <td className="py-3 px-3 font-mono text-gov-muted">{c.candidate_id.substring(0,8)}...</td>
+                          <td className="py-3 px-3 font-bold text-navy-800">{c.mmsi}</td>
+                          <td className="py-3 px-3 font-mono text-navy-800">{new Date(c.release_timestamp).toLocaleString()}</td>
+                          <td className="py-3 px-3 font-mono text-navy-800">{c.release_latitude.toFixed(4)}, {c.release_longitude.toFixed(4)}</td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded border ${
+                              c.evaluation_status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}>{c.evaluation_status}</span>
+                          </td>
+                          <td className="py-3 px-3 text-right font-extrabold text-navy-800">
+                            {(c.posterior_probability * 100).toFixed(1)}%
+                          </td>
+                        </tr>
+                      ))}
+                      {processedCase?.summary_json?.bayesian_report?.candidates?.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="py-6 px-4 text-center text-gov-muted text-xs">
+                            <p className="font-semibold text-navy-800 mb-1">No candidate hypotheses identified</p>
+                          </td>
+                        </tr>
+                      )}
+                      {!processedCase?.summary_json?.bayesian_report && (
+                        <tr>
+                          <td colSpan={6} className="py-6 px-3 text-center text-gov-muted">
+                            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-navy-800" />
+                            Loading Bayesian attribution results...
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-gov-light text-navy-800 font-bold border-b border-gov-border uppercase tracking-wider text-[10px]">
                       <tr>
-                        <td colSpan={6} className="py-6 px-3 text-center text-gov-muted">
-                          <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-navy-800" />
-                          Loading vessel attribution results...
-                        </td>
+                        <th className="py-2.5 px-3">Rank / Vessel</th>
+                        <th className="py-2.5 px-3">MMSI / Type</th>
+                        <th className="py-2.5 px-3">Proximity</th>
+                        <th className="py-2.5 px-3">Trajectory</th>
+                        <th className="py-2.5 px-3">Anomalies</th>
+                        <th className="py-2.5 px-3 text-right">Score</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gov-border bg-white">
+                      {(vesselsResult || []).map((v: any, idx: number) => (
+                        <tr key={v.mmsi} className={idx === 0 ? 'bg-red-50/50' : ''}>
+                          <td className="py-3 px-3 font-bold text-navy-800 flex items-center space-x-2">
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white ${
+                              idx === 0 ? 'bg-red-600' : idx === 1 ? 'bg-amber-500' : 'bg-slate-400'
+                            }`}>{idx + 1}</span>
+                            <span>{v.name}</span>
+                          </td>
+                          <td className="py-3 px-3 font-mono text-gov-muted">{v.mmsi} ({v.type})</td>
+                          <td className="py-3 px-3 font-mono text-navy-800">{v.proximity_score}%</td>
+                          <td className="py-3 px-3 font-mono text-navy-800">{v.trajectory_score}%</td>
+                          <td className="py-3 px-3">
+                            <div className="flex flex-wrap gap-1">
+                              {(v.warning_flags || []).map((f: string, fIdx: number) => (
+                                <span 
+                                  key={fIdx}
+                                  className={`inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded border ${
+                                    f.includes('GAP') || f.includes('DEVIATION')
+                                      ? 'bg-red-100 text-red-800 border-red-200'
+                                      : 'bg-gov-light text-navy-800 border-gov-border'
+                                  }`}
+                                >
+                                  {f}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className={`py-3 px-3 text-right font-extrabold ${
+                            idx === 0 ? 'text-red-600 text-sm' : idx === 1 ? 'text-amber-600' : 'text-gov-muted'
+                          }`}>
+                            {v.overall_score} / 100
+                          </td>
+                        </tr>
+                      ))}
+                      {vesselsResult && vesselsResult.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="py-6 px-4 text-center text-gov-muted text-xs">
+                            <p className="font-semibold text-navy-800 mb-1">No candidate vessels identified</p>
+                            <p className="text-[11px] text-gov-muted">
+                              {processedCase?.summary_json?.attribution_message ||
+                                'Vessel attribution requires reverse hydrodynamic drift origin coordinates or candidate AIS telemetry in the operational window.'}
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                      {!vesselsResult && (
+                        <tr>
+                          <td colSpan={6} className="py-6 px-3 text-center text-gov-muted">
+                            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-navy-800" />
+                            Loading vessel attribution results...
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
           )}

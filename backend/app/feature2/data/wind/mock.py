@@ -34,6 +34,18 @@ class MockWindProvider(HistoricalWindProvider):
     def provider_name(self) -> str:
         return "mock_surface_wind"
 
+    @property
+    def mock_reader(self):
+        try:
+            from opendrift.readers.reader_constant import Reader
+            return Reader({'x_wind': self.const_u, 'y_wind': self.const_v})
+        except ImportError:
+            return None
+
+    @property
+    def active_filepath(self) -> Optional[str]:
+        return None
+
     def fetch_grid(self, window: EnvironmentalQueryWindow) -> bool:
         return True
 

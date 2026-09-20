@@ -114,7 +114,7 @@ class TestTask8LiveOperational(unittest.TestCase):
     def test_04_cmems_forecast_layer_depth(self):
         """Verify CMEMS forecast provider selects surface ocean layer (depth <= 0.494m)."""
         prov = CopernicusForecastCurrentsProvider(data_path=None)
-        self.assertEqual(prov.config.dataset_id, "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m")
+        self.assertEqual(prov.config.dataset_id, "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i")
         self.assertLessEqual(prov.config.depth_level_m, 0.5)
 
     def test_05_cache_consistency(self):

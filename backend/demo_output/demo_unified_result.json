@@ -3,6 +3,7 @@
   "spill_id": "DEMO_SENTINEL1_OFFSHORE_SLICK_001",
   "observation": {
     "observation_time": "2018-08-03T17:25:57Z",
+    "observation_time_source": "sentinel_metadata",
     "centroid": {
       "lat": 55.241575,
       "lon": 4.053477
@@ -56,7 +57,7 @@
       "end": "2018-08-05T17:25:57Z"
     },
     "forecast_provenance_status": "HISTORICAL_REPLAY_FIXTURE",
-    "forecast_provenance_notes": "Historical replay forecast: forecast forcing for 2018 is supplied by local historical fixture data because current operational GFS does not archive the 2018 forecast cycle.",
+    "forecast_provenance_notes": "Historical replay forecast: forecast forcing is supplied by local historical fixture data.",
     "fields": {
       "historical_wind": {
         "provider_name": "ECMWF ERA5",
@@ -67,6 +68,20 @@
         "data_category": "historical",
         "source_type": "LOCAL_TEST_FIXTURE",
         "cache_status": "direct",
+        "variables": [
+          "u10",
+          "v10"
+        ],
+        "units": "m/s",
+        "spatial_resolution": null,
+        "temporal_resolution": null,
+        "requested_spatial_domain": null,
+        "actual_spatial_domain": {
+          "min_lat": 53.0,
+          "max_lat": 57.5,
+          "min_lon": 1.5,
+          "max_lon": 6.5
+        },
         "requested_time_range": {
           "start": "2018-07-31T17:25:57Z",
           "end": "2018-08-03T17:25:57Z"
@@ -75,6 +90,8 @@
           "start": "2018-07-31T12:00:00Z",
           "end": "2018-08-04T06:00:00Z"
         },
+        "spatially_matched": null,
+        "temporally_matched": true,
         "used_in_numerical_simulation": true,
         "notes": "Applied in numerical Lagrangian simulation."
       },
@@ -82,11 +99,30 @@
         "provider_name": "Copernicus Marine Service",
         "dataset_id": "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
         "model_source": "Copernicus Global Ocean Physics Analysis and Forecast",
-        "access_provider": "Copernicus Marine Data Store",
+        "access_provider": "Copernicus Marine Toolbox",
         "field_type": "ocean_currents",
         "data_category": "historical",
         "source_type": "LOCAL_TEST_FIXTURE",
         "cache_status": "direct",
+        "variables": [
+          "uo",
+          "vo"
+        ],
+        "units": "m/s",
+        "spatial_resolution": "0.083 degree (~9 km)",
+        "temporal_resolution": "P1D (daily-mean; interpolated to 600s simulation steps)",
+        "requested_spatial_domain": {
+          "min_lat": 54.70041981813773,
+          "max_lat": 55.69110018186227,
+          "min_lon": 3.233372707268731,
+          "max_lon": 4.90824729273127
+        },
+        "actual_spatial_domain": {
+          "min_lat": 53.0,
+          "max_lat": 57.5,
+          "min_lon": 1.5,
+          "max_lon": 6.5
+        },
         "requested_time_range": {
           "start": "2018-07-31T17:25:57Z",
           "end": "2018-08-03T17:25:57Z"
@@ -95,18 +131,39 @@
           "start": "2018-07-31T12:00:00Z",
           "end": "2018-08-06T06:00:00Z"
         },
+        "spatially_matched": true,
+        "temporally_matched": true,
         "used_in_numerical_simulation": true,
         "notes": "Applied in numerical Lagrangian simulation."
       },
       "forecast_wind": {
         "provider_name": "NOAA GFS",
         "dataset_id": "gfs_0p25_forecast",
-        "model_source": "GFS",
-        "access_provider": "Open-Meteo",
+        "model_source": "NOAA GFS",
+        "access_provider": "Open-Meteo GFS API",
         "field_type": "surface_wind",
         "data_category": "forecast",
         "source_type": "LOCAL_TEST_FIXTURE",
         "cache_status": "direct",
+        "variables": [
+          "u10",
+          "v10"
+        ],
+        "units": "m/s",
+        "spatial_resolution": "0.25 degree (~28 km)",
+        "temporal_resolution": "1 hour (hourly forecast; interpolated to simulation steps)",
+        "requested_spatial_domain": {
+          "min_lat": 54.70041981813773,
+          "max_lat": 55.69110018186227,
+          "min_lon": 3.233372707268731,
+          "max_lon": 4.90824729273127
+        },
+        "actual_spatial_domain": {
+          "min_lat": 53.0,
+          "max_lat": 57.5,
+          "min_lon": 1.5,
+          "max_lon": 6.5
+        },
         "requested_time_range": {
           "start": "2018-08-03T17:25:57Z",
           "end": "2018-08-05T17:25:57Z"
@@ -115,18 +172,39 @@
           "start": "2018-08-03T12:00:00Z",
           "end": "2018-08-06T06:00:00Z"
         },
+        "spatially_matched": true,
+        "temporally_matched": true,
         "used_in_numerical_simulation": true,
         "notes": "Applied in numerical Lagrangian simulation."
       },
       "forecast_currents": {
         "provider_name": "Copernicus Marine Service",
-        "dataset_id": "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
+        "dataset_id": "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
         "model_source": "Copernicus Global Ocean Physics Analysis and Forecast",
-        "access_provider": "Copernicus Marine Data Store",
+        "access_provider": "Copernicus Marine Toolbox",
         "field_type": "ocean_currents",
         "data_category": "forecast",
         "source_type": "LOCAL_TEST_FIXTURE",
         "cache_status": "direct",
+        "variables": [
+          "uo",
+          "vo"
+        ],
+        "units": "m/s",
+        "spatial_resolution": "0.083 degree (~9 km)",
+        "temporal_resolution": "P1D (daily-mean; interpolated to 600s simulation steps)",
+        "requested_spatial_domain": {
+          "min_lat": 54.70041981813773,
+          "max_lat": 55.69110018186227,
+          "min_lon": 3.233372707268731,
+          "max_lon": 4.90824729273127
+        },
+        "actual_spatial_domain": {
+          "min_lat": 53.0,
+          "max_lat": 57.5,
+          "min_lon": 1.5,
+          "max_lon": 6.5
+        },
         "requested_time_range": {
           "start": "2018-08-03T17:25:57Z",
           "end": "2018-08-05T17:25:57Z"
@@ -135,6 +213,8 @@
           "start": "2018-07-31T12:00:00Z",
           "end": "2018-08-06T06:00:00Z"
         },
+        "spatially_matched": true,
+        "temporally_matched": true,
         "used_in_numerical_simulation": true,
         "notes": "Applied in numerical Lagrangian simulation."
       }
@@ -151,7 +231,7 @@
         "mode": "historical",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_era5_2018.nc",
+        "active_filepath": "C:\\Users\\hp\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_era5_2018.nc",
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -165,7 +245,10 @@
       },
       "historical_currents": {
         "source": "Copernicus Marine Service",
+        "model_source": "Copernicus Global Ocean Physics Analysis and Forecast",
+        "access_provider": "Copernicus Marine Toolbox",
         "product": "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
+        "dataset_id": "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
         "variables": [
           "uo",
           "vo"
@@ -176,7 +259,22 @@
         "mode": "historical",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
+        "active_filepath": "C:\\Users\\hp\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
+        "temporal_resolution": "P1D (daily-mean; interpolated to 600s simulation steps)",
+        "spatial_resolution": "0.083 degree (~9 km)",
+        "used_in_numerical_simulation": true,
+        "spatially_matched": true,
+        "temporally_matched": true,
+        "requested_spatial_domain": {
+          "min_lat": 54.70041981813773,
+          "max_lat": 55.69110018186227,
+          "min_lon": 3.233372707268731,
+          "max_lon": 4.90824729273127
+        },
+        "requested_temporal_domain": {
+          "start": "2018-07-31T17:25:57+00:00",
+          "end": "2018-08-03T17:25:57+00:00"
+        },
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -190,6 +288,8 @@
       },
       "forecast_wind": {
         "source": "NOAA GFS",
+        "model_source": "NOAA GFS",
+        "access_provider": "Open-Meteo GFS API",
         "product": "gfs_0p25_forecast",
         "variables": [
           "u10",
@@ -199,7 +299,22 @@
         "mode": "forecast",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_forecast_wind_2018.nc",
+        "active_filepath": "C:\\Users\\hp\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_forecast_wind_2018.nc",
+        "spatial_resolution": "0.25 degree (~28 km)",
+        "temporal_resolution": "1 hour (hourly forecast; interpolated to simulation steps)",
+        "used_in_numerical_simulation": true,
+        "spatially_matched": true,
+        "temporally_matched": true,
+        "requested_spatial_domain": {
+          "min_lat": 54.70041981813773,
+          "max_lat": 55.69110018186227,
+          "min_lon": 3.233372707268731,
+          "max_lon": 4.90824729273127
+        },
+        "requested_temporal_domain": {
+          "start": "2018-08-03T17:25:57+00:00",
+          "end": "2018-08-05T17:25:57+00:00"
+        },
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -213,7 +328,10 @@
       },
       "forecast_currents": {
         "source": "Copernicus Marine Service",
-        "product": "cmems_mod_glo_phy-cur_anfc_0.083deg_P1D-m",
+        "model_source": "Copernicus Global Ocean Physics Analysis and Forecast",
+        "access_provider": "Copernicus Marine Toolbox",
+        "product": "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
+        "dataset_id": "cmems_mod_glo_phy-cur_anfc_0.083deg_PT6H-i",
         "variables": [
           "uo",
           "vo"
@@ -224,7 +342,22 @@
         "mode": "forecast",
         "source_type": "local_netcdf",
         "cache_status": "direct",
-        "active_filepath": "C:\\Users\\Harsh\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
+        "active_filepath": "C:\\Users\\hp\\OneDrive\\Desktop\\Spill_Tracker\\backend\\tests\\feature2\\fixtures\\environment\\north_sea_copernicus_2018.nc",
+        "temporal_resolution": "P1D (daily-mean; interpolated to 600s simulation steps)",
+        "spatial_resolution": "0.083 degree (~9 km)",
+        "used_in_numerical_simulation": true,
+        "spatially_matched": true,
+        "temporally_matched": true,
+        "requested_spatial_domain": {
+          "min_lat": 54.70041981813773,
+          "max_lat": 55.69110018186227,
+          "min_lon": 3.233372707268731,
+          "max_lon": 4.90824729273127
+        },
+        "requested_temporal_domain": {
+          "start": "2018-08-03T17:25:57+00:00",
+          "end": "2018-08-05T17:25:57+00:00"
+        },
         "spatial_domain": {
           "min_lat": 53.0,
           "max_lat": 57.5,
@@ -894,6 +1027,8 @@
         "simulation_quality": "HIGH",
         "quality": "HIGH",
         "valid": true,
+        "status": "ACTIVE",
+        "termination_reason": null,
         "predicted_slick_polygon": {
           "type": "Polygon",
           "coordinates": [
@@ -1048,7 +1183,16 @@
               ]
             ]
           ]
-        }
+        },
+        "current_u": null,
+        "current_v": null,
+        "wind_u": null,
+        "wind_v": null,
+        "windage_coefficient": null,
+        "total_u": null,
+        "total_v": null,
+        "current_displacement_km": null,
+        "wind_displacement_km": null
       },
       {
         "horizon_hours": 12.0,
@@ -1224,6 +1368,8 @@
         "simulation_quality": "HIGH",
         "quality": "HIGH",
         "valid": true,
+        "status": "ACTIVE",
+        "termination_reason": null,
         "predicted_slick_polygon": {
           "type": "Polygon",
           "coordinates": [
@@ -1378,7 +1524,16 @@
               ]
             ]
           ]
-        }
+        },
+        "current_u": null,
+        "current_v": null,
+        "wind_u": null,
+        "wind_v": null,
+        "windage_coefficient": null,
+        "total_u": null,
+        "total_v": null,
+        "current_displacement_km": null,
+        "wind_displacement_km": null
       },
       {
         "horizon_hours": 24.0,
@@ -1554,6 +1709,8 @@
         "simulation_quality": "HIGH",
         "quality": "HIGH",
         "valid": true,
+        "status": "ACTIVE",
+        "termination_reason": null,
         "predicted_slick_polygon": {
           "type": "Polygon",
           "coordinates": [
@@ -1708,7 +1865,16 @@
               ]
             ]
           ]
-        }
+        },
+        "current_u": null,
+        "current_v": null,
+        "wind_u": null,
+        "wind_v": null,
+        "windage_coefficient": null,
+        "total_u": null,
+        "total_v": null,
+        "current_displacement_km": null,
+        "wind_displacement_km": null
       },
       {
         "horizon_hours": 48.0,
@@ -1884,6 +2050,8 @@
         "simulation_quality": "HIGH",
         "quality": "HIGH",
         "valid": true,
+        "status": "ACTIVE",
+        "termination_reason": null,
         "predicted_slick_polygon": {
           "type": "Polygon",
           "coordinates": [
@@ -2038,7 +2206,16 @@
               ]
             ]
           ]
-        }
+        },
+        "current_u": null,
+        "current_v": null,
+        "wind_u": null,
+        "wind_v": null,
+        "windage_coefficient": null,
+        "total_u": null,
+        "total_v": null,
+        "current_displacement_km": null,
+        "wind_displacement_km": null
       }
     ],
     "ensemble": {

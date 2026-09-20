@@ -58,4 +58,9 @@ def rerun_case(case_id):
         db.close()
 
 if __name__ == "__main__":
-    rerun_case("SLK-D2DB")
+    if len(sys.argv) < 2:
+        print("Usage: python rerun_d2db.py <CASE_ID>")
+        sys.exit(1)
+    
+    case_id_arg = sys.argv[1]
+    rerun_case(case_id_arg)

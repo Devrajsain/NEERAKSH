@@ -63,6 +63,17 @@ def parse_utc_timestamp(val: Any) -> Optional[datetime]:
         return None
 
 
+def _get_first_valid(d: Dict[str, Any], keys: List[str]) -> Any:
+    """Helper to extract first valid non-empty value, correctly preserving 0 and 0.0."""
+    for k in keys:
+        if k in d:
+            val = d[k]
+            if val is not None and str(val).strip() != "":
+                return val
+    return None
+
+
+
 def clean_and_validate_ais(
     source: Union[str, bytes, pd.DataFrame, List[Dict[str, Any]]],
     config: Optional[Feature3EngineConfig] = None,
@@ -118,6 +129,8 @@ def clean_and_validate_ais(
             quarantined_count += 1
             continue
         mmsi = str(mmsi_val).strip()
+        if mmsi.endswith('.0'):
+            mmsi = mmsi[:-2]
         if not mmsi or mmsi == "0" or mmsi.lower() == "nan":
             quarantined_count += 1
             continue
@@ -162,8 +175,7 @@ def clean_and_validate_ais(
         seen_keys.add(dedup_key)
 
         # Extract SOG (Speed Over Ground)
-        sog_raw = (norm_row.get("sog") or norm_row.get("speed") or 
-                   norm_row.get("speed_knots") or norm_row.get("speed_over_ground"))
+        sog_raw = _get_first_valid(norm_row, ["sog", "speed", "speed_knots", "sog_knots", "speed_over_ground"])
         sog: Optional[float] = None
         if sog_raw is not None and str(sog_raw).strip() != "":
             try:
@@ -175,9 +187,7 @@ def clean_and_validate_ais(
                 quality_flags.append("UNPARSEABLE_SOG")
 
         # Extract COG (Course Over Ground)
-        cog_raw = (norm_row.get("cog") or norm_row.get("course") or 
-                   norm_row.get("heading") or norm_row.get("heading_deg") or
-                   norm_row.get("course_over_ground"))
+        cog_raw = _get_first_valid(norm_row, ["cog", "course", "heading", "heading_deg", "cog_degrees", "course_over_ground"])
         cog: Optional[float] = None
         if cog_raw is not None and str(cog_raw).strip() != "":
             try:

@@ -30,6 +30,7 @@ def _run_feature2_pipeline(
     detection_result: dict,
     center_lat: float,
     center_lon: float,
+    allow_test_fixture: bool = False,
 ) -> dict:
     """
     Attempts to run Feature 2 (origin tracing + trajectory forecasting)
@@ -48,10 +49,29 @@ def _run_feature2_pipeline(
         )
 
         # Try importing and running the Feature 2 pipeline service
-        from app.feature2.api.dependencies import get_pipeline_service
         from app.feature2.schemas.feature1_adapter import parse_feature1_input
 
-        service = get_pipeline_service()
+        if allow_test_fixture:
+            from app.feature2.api.dependencies import get_settings
+            from app.feature2.data.currents.mock import MockCurrentsProvider
+            from app.feature2.data.wind.mock import MockWindProvider
+            from app.feature2.simulation.forward.engine import ForwardSimulationEngine
+            from app.feature2.simulation.backward.engine import BackwardSimulationEngine
+            from app.feature2.origin.estimator import OriginEstimator
+            from app.feature2.forecast.forecaster import ForwardForecaster
+            from app.feature2.pipeline.service import Feature2PipelineService
+            
+            settings = get_settings()
+            mock_currents = MockCurrentsProvider()
+            mock_wind = MockWindProvider()
+            fwd_sim = ForwardSimulationEngine(mock_currents, mock_wind, settings)
+            bwd_sim = BackwardSimulationEngine(mock_currents, mock_wind, settings)
+            origin_est = OriginEstimator(mock_currents, mock_wind, settings)
+            forecaster = ForwardForecaster(fwd_sim, settings)
+            service = Feature2PipelineService(origin_est, forecaster, settings)
+        else:
+            from app.feature2.api.dependencies import get_pipeline_service
+            service = get_pipeline_service()
         slick_input = parse_feature1_input(feature2_input)
         pipeline_response = service.run_pipeline(slick_input)
 
@@ -163,6 +183,7 @@ def execute_5step_pipeline(
     center_lat: Optional[float] = None,
     center_lon: Optional[float] = None,
     observation_time: Optional[str] = None,
+    allow_test_fixture: bool = False,
 ) -> dict:
     """
     Executes the 5-step forensic analysis pipeline:
@@ -178,10 +199,32 @@ def execute_5step_pipeline(
     before Feature 2 runs.
     """
     # Step 2: Satellite Detection (Feature 1)
-    spill_res = run_spill_detection_model(image_path, center_lat, center_lon, observation_time=observation_time)
-
+    spill_res = run_spill_detection_model(
+        image_path=image_path,
+        center_lat=center_lat,
+        center_lon=center_lon,
+        observation_time=observation_time,
+        allow_test_fixture=allow_test_fixture,
+    )
     # Determine effective coordinates: GeoTIFF auto-detected coordinates take precedence
-    if spill_res.get("geospatial_metadata_detected") and spill_res.get("spill_latitude") is not None:
+    # EXCEPT in test mode, where explicit center coords take precedence for synthetic data consistency
+    if allow_test_fixture and center_lat is not None and center_lon is not None:
+        effective_lat = center_lat
+        effective_lon = center_lon
+        spill_res["spill_latitude"] = center_lat
+        spill_res["spill_longitude"] = center_lon
+        # Override geometry to be a box around the center so backward simulation starts in the right place
+        spill_res["polygon_geojson"] = {
+            "type": "Polygon",
+            "coordinates": [[
+                [center_lon - 0.1, center_lat - 0.1],
+                [center_lon + 0.1, center_lat - 0.1],
+                [center_lon + 0.1, center_lat + 0.1],
+                [center_lon - 0.1, center_lat + 0.1],
+                [center_lon - 0.1, center_lat - 0.1]
+            ]]
+        }
+    elif spill_res.get("geospatial_metadata_detected") and spill_res.get("spill_latitude") is not None:
         effective_lat = spill_res["spill_latitude"]
         effective_lon = spill_res["spill_longitude"]
     else:
@@ -247,7 +290,7 @@ def execute_5step_pipeline(
         f"geospatial_metadata_detected={spill_res.get('geospatial_metadata_detected')}, "
         f"observation_time={spill_res.get('observation_time')}"
     )
-    feature2_res = _run_feature2_pipeline(case_id, spill_res, effective_lat, effective_lon)
+    feature2_res = _run_feature2_pipeline(case_id, spill_res, effective_lat, effective_lon, allow_test_fixture)
 
     # Check if mock mode is explicitly requested
     is_explicit_mock = (
@@ -287,6 +330,18 @@ def execute_5step_pipeline(
                     "lon": fc["centroid_longitude"],
                 })
         drift_res["drift_trajectory"] = trajectory
+        
+        # Bayesian pipeline needs spatial/temporal prefilter boundaries
+        drift_fallback = run_drift_hindcast_model(
+            effective_lat,
+            effective_lon,
+            detection_timestamp=spill_res.get("detection_timestamp") or spill_res.get("observation_time"),
+        )
+        drift_res["prefilter_start_time"] = drift_fallback.get("prefilter_start_time")
+        drift_res["prefilter_end_time"] = drift_fallback.get("prefilter_end_time")
+        drift_res["candidate_spatial_region"] = drift_fallback.get("candidate_spatial_region")
+        drift_res["simulation_duration_hours"] = drift_fallback.get("simulation_duration_hours")
+        
     elif is_explicit_mock:
         # Fall back to simple mock drift ONLY in explicit mock mode
         logger.info(
@@ -316,6 +371,9 @@ def execute_5step_pipeline(
     # Step 4: AIS Vessel Attribution
     # Requirement 4: When Feature 2 returns DATA_UNAVAILABLE in real mode, Feature 3 attribution must NOT execute an attribution calculation.
     # It should report that environmental origin context is unavailable.
+    
+    bayesian_report = None
+    
     if drift_res.get("status") == "DATA_UNAVAILABLE" or drift_res.get("origin_latitude") is None:
         logger.warning(
             f"Case {case_id}: Skipping Feature 3 vessel attribution because environmental origin context is unavailable."
@@ -337,7 +395,7 @@ def execute_5step_pipeline(
             except Exception as e:
                 logger.warning(f"Could not build Feature2 context for attribution: {e}")
 
-        # Explicit test/demo execution detection - never silently substitute in real production cases
+        # Explicit test/demo execution detection for Feature 3 fallbacks (e.g., demo AIS data)
         is_test_or_demo = bool(
             case_id and ("TEST" in case_id.upper() or "DEMO" in case_id.upper() or "SAMPLE" in case_id.upper())
         )
@@ -352,15 +410,102 @@ def execute_5step_pipeline(
         attribution_status = "COMPLETED" if vessels_res else "NO_VESSELS_FOUND"
         attribution_message = None
 
+        should_run_bayesian = bool(allow_test_fixture)
+        
+        if should_run_bayesian and drift_res.get("origin_latitude") is not None:
+            from app.bayesian.orchestrator import BayesianPipelineOrchestrator
+            from app.bayesian.schemas import BayesianPipelineRequest, BayesianPrefilterResult
+            from app.services.feature2_bridge import feature1_to_feature2_geojson
+            from app.feature2.schemas.feature1_adapter import parse_feature1_input
+            
+            feature2_input = feature1_to_feature2_geojson(
+                detection_output=spill_res,
+                case_id=case_id,
+                center_lat=spill_res["spill_latitude"],
+                center_lon=spill_res["spill_longitude"],
+            )
+            slick_input = parse_feature1_input(feature2_input)
+            
+            import csv
+            ais_data = []
+            effective_csv = csv_path
+            if not effective_csv or not os.path.exists(effective_csv):
+                if allow_test_fixture:
+                    from app.config import settings
+                    sample_csv = os.path.join(settings.UPLOAD_DIR, "sample_ais_telemetry.csv")
+                    if os.path.exists(sample_csv):
+                        effective_csv = sample_csv
+
+            if effective_csv and os.path.exists(effective_csv):
+                with open(effective_csv, "r", encoding="utf-8-sig") as f:
+                    reader = csv.DictReader(f)
+                    ais_data = list(reader)
+
+            from datetime import timedelta
+            t_end = slick_input.observation_time
+            t_start = t_end - timedelta(hours=72)
+            
+            # If Feature 2 didn't provide a candidate region, build a generous bounding box around the origin/slick
+            # to ensure we don't drop candidates for the synthetic dataset.
+            region = drift_res.get("candidate_spatial_region")
+            if not region:
+                olat = drift_res.get("origin_latitude") or effective_lat
+                olon = drift_res.get("origin_longitude") or effective_lon
+                region = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [[
+                            [olon - 2.0, olat - 2.0],
+                            [olon + 2.0, olat - 2.0],
+                            [olon + 2.0, olat + 2.0],
+                            [olon - 2.0, olat + 2.0],
+                            [olon - 2.0, olat - 2.0]
+                        ]]
+                    }
+                }
+
+            bayesian_req = BayesianPipelineRequest(
+                spill_data=slick_input,
+                ais_data=ais_data,
+                feature2_context=f2_ctx
+            )
+
+            is_explicit_mock = (
+                os.getenv("FEATURE2_ENVIRONMENT", "").lower() == "testing"
+                or os.getenv("FEATURE2_CURRENTS_PROVIDER", "").lower() == "mock"
+            )
+            
+            if allow_test_fixture or is_explicit_mock:
+                from app.feature2.data.currents.mock import MockCurrentsProvider
+                currents_provider = MockCurrentsProvider()
+                from app.feature2.data.wind.mock import MockWindProvider
+                wind_provider = MockWindProvider()
+            else:
+                from app.feature2.api.dependencies import get_currents_provider, get_wind_provider, get_settings
+                
+                settings = get_settings()
+                currents_provider = get_currents_provider(settings)
+                wind_provider = get_wind_provider(settings)
+
+            orchestrator = BayesianPipelineOrchestrator(currents_provider=currents_provider, wind_provider=wind_provider)
+            bayesian_report = orchestrator.run_pipeline(bayesian_req).model_dump(mode='json')
+
     # Step 5: Summary Package
     summary_status = "DATA_UNAVAILABLE" if drift_res.get("status") == "DATA_UNAVAILABLE" else "COMPLETED"
+    
+    attribution_mode = "BAYESIAN" if allow_test_fixture else "FEATURE3"
+    
     summary = {
         "case_id": case_id,
         "status": summary_status,
+        "is_test_mode": allow_test_fixture,
+        "attribution_mode": attribution_mode,
         "spill": spill_res,
         "drift": drift_res,
         "vessels": vessels_res,
         "feature2": feature2_res,
+        "bayesian_report": bayesian_report,
         "attribution_status": attribution_status,
         "attribution_message": attribution_message,
         "processed_at": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),

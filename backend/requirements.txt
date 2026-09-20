@@ -28,4 +28,5 @@ cdsapi>=0.7.0
 copernicusmarine>=2.0.0
 httpx>=0.27.0
 pytest>=8.0.0
-
+shapely>=2.0.0
+opendrift>=1.14.0

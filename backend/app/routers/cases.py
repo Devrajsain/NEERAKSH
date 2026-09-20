@@ -90,6 +90,7 @@ async def create_case(
     observation_time: Optional[str] = Form(None),
     image_file: Optional[UploadFile] = File(None),
     csv_file: Optional[UploadFile] = File(None),
+    test_mode: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     # Validate coordinates if passed
@@ -130,7 +131,8 @@ async def create_case(
     try:
         summary = execute_5step_pipeline(
             case_id, image_path, csv_path, center_latitude, center_longitude,
-            observation_time=observation_time
+            observation_time=observation_time,
+            allow_test_fixture=test_mode
         )
     except ValueError as ve:
         raise HTTPException(status_code=422, detail=str(ve))

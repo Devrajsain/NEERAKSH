@@ -141,6 +141,11 @@ class EnvironmentalDataProvider(ABC):
         """Physical field type: 'ocean_currents' or 'surface_wind'."""
         pass
 
+    @property
+    def active_filepath(self) -> Optional[str]:
+        """Path to the underlying data file (e.g., cached NetCDF) if applicable and available."""
+        return getattr(self, '_active_filepath', None)
+
     @abstractmethod
     def fetch_grid(self, window: EnvironmentalQueryWindow) -> bool:
         """

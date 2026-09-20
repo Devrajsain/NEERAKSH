@@ -104,7 +104,7 @@ export const ExplainabilityModal: React.FC<ExplainabilityModalProps> = ({ vessel
 
             <div className="text-right sm:border-l sm:border-gov-border sm:pl-4 text-[11px] space-y-1">
               <div className="text-gov-muted">Current Telemetry:</div>
-              <div className="font-mono font-bold text-navy-800">{vessel.speed_kts} • {vessel.heading_deg}° COG</div>
+              <div className="font-mono font-bold text-navy-800">{vessel.speed_kts != null ? `${vessel.speed_kts} kts` : '—'} • {vessel.heading_deg ?? '—'}° COG</div>
               <div className="font-mono text-gov-muted text-[10px]">{vessel.current_latitude.toFixed(4)}°N, {vessel.current_longitude.toFixed(4)}°E</div>
             </div>
           </div>

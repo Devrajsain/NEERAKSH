@@ -12,16 +12,14 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenU
 
   const navLinks = [
     { label: 'Home', action: () => onNavigate('home'), isActive: currentView === 'home' },
-    { label: 'About', action: () => onNavigate('home'), isActive: false },
     { label: 'Forensic Workflow', action: () => onNavigate('workflow'), isActive: currentView === 'workflow' },
-    { label: 'Surveillance Dashboard', action: () => onNavigate('dashboard'), isActive: currentView === 'dashboard' },
-    { label: 'Upload Case', action: onOpenUpload, isActive: false },
     { label: 'Contact', action: () => onNavigate('home'), isActive: false },
+    { label: 'About', action: () => onNavigate('home'), isActive: false },
   ];
 
   return (
     <header className="absolute top-0 left-0 right-0 z-50">
-      <div className="header-glass">
+      <div className="header-glass" style={{ background: 'rgba(4,16,31,0.55)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 lg:h-[72px]">
             {/* Brand */}
@@ -34,14 +32,9 @@ export const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, onOpenU
                 alt="NEERAKSH"
                 className="w-10 h-10 rounded-full object-cover border border-cyan-400/30 shadow-sm group-hover:border-cyan-400/60 transition-all"
               />
-              <div className="hidden sm:block">
-                <span className="text-lg font-bold tracking-tight text-white">
+              <span className="text-lg font-bold tracking-tight text-white">
                   NEERAKSH
                 </span>
-                <p className="text-[10px] text-white/50 font-medium leading-tight">
-                  Marine Oil Spill Detection &amp; Vessel Attribution System
-                </p>
-              </div>
             </div>
 
             {/* Desktop Navigation */}

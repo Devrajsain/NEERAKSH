@@ -48,49 +48,80 @@ export const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ spil
 
   if (!report && !isLoading && !error) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white shadow rounded-lg border border-gray-200">
-        <Database className="h-16 w-16 text-blue-500 mb-4" />
-        <h2 className="text-2xl font-semibold text-gray-800 mb-2">Bayesian Attribution Pipeline</h2>
-        <p className="text-gray-600 mb-6 text-center max-w-lg">
-          Execute the end-to-end attribution pipeline (Phases 1-6 + Feature 3). 
-          {isDemoMode && <span className="block mt-2 font-bold text-amber-600">Note: Currently running in DEMO / SYNTHETIC DATA mode.</span>}
-        </p>
-        <button 
-          onClick={handleRunPipeline}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md shadow flex items-center gap-2"
-        >
-          <Ship className="h-5 w-5" />
-          Run Attribution Pipeline
-        </button>
+      <div className="flex-1 min-h-full flex items-center justify-center p-4 sm:p-8 my-auto">
+        <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl border border-slate-200/80 p-8 sm:p-10 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-5 shadow-inner">
+            <Database className="h-8 w-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight mb-2">
+            Bayesian Attribution Pipeline
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-md mb-5">
+            Execute the end-to-end AIS trajectory attribution pipeline (Phases 1–6 + Feature 3 Supplemental Evidence) to correlate candidate vessel tracks with hindcast drift physics.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-6 text-[11px] font-medium text-slate-600">
+            <span className="bg-slate-100 px-3 py-1 rounded-md border border-slate-200 font-mono text-slate-700">
+              Case: {spillId}
+            </span>
+            <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-md border border-blue-200/70">
+              Phases 1–6 Bayesian Engine
+            </span>
+            {isDemoMode && (
+              <span className="bg-amber-50 text-amber-700 px-3 py-1 rounded-md border border-amber-200">
+                Demo / Synthetic Mode
+              </span>
+            )}
+          </div>
+
+          <button 
+            onClick={handleRunPipeline}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold text-xs shadow-md shadow-blue-500/25 transition-all duration-200 cursor-pointer"
+          >
+            <Ship className="h-4 w-4" />
+            <span>Run Attribution Pipeline</span>
+          </button>
+        </div>
       </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 bg-white shadow rounded-lg border border-gray-200 min-h-[400px]">
-        <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
-        <h2 className="text-xl font-medium text-gray-800">Executing Pipeline...</h2>
-        <p className="text-gray-500 mt-2">This may take a moment.</p>
+      <div className="flex-1 min-h-full flex items-center justify-center p-4 sm:p-8 my-auto">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-slate-200/80 p-8 sm:p-10 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+          <div className="relative w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-5">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="absolute inset-0 rounded-2xl border-2 border-blue-400/40 animate-ping pointer-events-none" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-1.5">Executing Attribution Pipeline...</h2>
+          <p className="text-xs text-slate-500 leading-relaxed max-w-xs">
+            Evaluating candidate trajectories, running hindcast dispersion physics, and computing posterior probabilities.
+          </p>
+          <div className="mt-5 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-blue-600 h-full w-2/3 animate-pulse rounded-full" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8 bg-red-50 shadow rounded-lg border border-red-200">
-        <div className="flex items-start gap-4">
-          <AlertTriangle className="h-8 w-8 text-red-600 flex-shrink-0" />
-          <div>
-            <h2 className="text-lg font-semibold text-red-800">Pipeline Execution Failed</h2>
-            <p className="text-red-700 mt-1">{error}</p>
-            <button 
-              onClick={handleRunPipeline}
-              className="mt-4 bg-red-600 hover:bg-red-700 text-white font-medium py-1.5 px-4 rounded shadow text-sm"
-            >
-              Retry
-            </button>
+      <div className="flex-1 min-h-full flex items-center justify-center p-4 sm:p-8 my-auto">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-red-200/80 p-8 text-center flex flex-col items-center animate-in zoom-in-95 duration-200">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 mb-4">
+            <AlertTriangle className="h-7 w-7" />
           </div>
+          <h2 className="text-base font-bold text-red-800 mb-1">Pipeline Execution Failed</h2>
+          <p className="text-xs text-red-600 mb-5 leading-relaxed max-w-xs">{error}</p>
+          <button 
+            onClick={handleRunPipeline}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            <span>Retry Pipeline</span>
+          </button>
         </div>
       </div>
     );
@@ -99,81 +130,94 @@ export const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ spil
   if (!report) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
       {/* Demo Banner */}
       {isDemoMode && (
-        <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 p-4 rounded shadow-sm flex items-center justify-between">
+        <div className="bg-amber-50 border border-amber-200/90 text-amber-800 p-4 rounded-xl shadow-xs flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="h-6 w-6" />
+            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
             <div>
-              <p className="font-bold">DEMO / SYNTHETIC DATA</p>
-              <p className="text-sm">This is a deterministic frontend fixture and must not be interpreted as real scientific data.</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-900">Demo / Synthetic Fixture Mode</p>
+              <p className="text-xs text-amber-700 mt-0.5">This analysis is running on deterministic synthetic test fixtures and should not be used as live legal testimony.</p>
             </div>
           </div>
         </div>
       )}
 
       {/* Header Summary */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div className="flex justify-between items-center mb-4 border-b pb-2">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Database className="h-5 w-5 text-blue-600" />
-            Final Attribution Report
-          </h2>
+      <div className="bg-white p-5 sm:p-6 rounded-xl shadow-xs border border-slate-200/90">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+              <Database className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">
+                Final Attribution Intelligence Report
+              </h2>
+              <p className="text-[11px] text-slate-500">Bayesian Posterior Distribution & Physicochemical Risk Ranking</p>
+            </div>
+          </div>
           <button 
             onClick={handleRunPipeline}
             disabled={isLoading}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-1 px-3 rounded text-sm shadow-sm flex items-center gap-1 disabled:opacity-50"
+            className="bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-700 font-semibold py-1.5 px-3.5 rounded-lg text-xs shadow-xs flex items-center gap-1.5 disabled:opacity-50 transition-colors cursor-pointer"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Re-run Bayesian Attribution
+            {isLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span>Re-run Pipeline</span>
           </button>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="bg-gray-50 p-3 rounded border border-gray-100">
-            <p className="text-xs text-gray-500 font-medium uppercase">Status</p>
-            <p className={`font-semibold ${report.status === 'SUCCESS' ? 'text-green-600' : 'text-red-600'}`}>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-100">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Evaluation Status</p>
+            <p className={`text-sm font-bold mt-0.5 flex items-center gap-1 ${report.status === 'SUCCESS' ? 'text-emerald-600' : 'text-red-600'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${report.status === 'SUCCESS' ? 'bg-emerald-500' : 'bg-red-500'}`} />
               {report.status}
             </p>
           </div>
-          <div className="bg-gray-50 p-3 rounded border border-gray-100">
-            <p className="text-xs text-gray-500 font-medium uppercase">Spill ID</p>
-            <p className="font-semibold text-gray-800">{report.spill_id}</p>
+          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-100">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Spill Incident</p>
+            <p className="text-sm font-bold text-slate-800 font-mono mt-0.5">{report.spill_id}</p>
           </div>
-          <div className="bg-gray-50 p-3 rounded border border-gray-100">
-            <p className="text-xs text-gray-500 font-medium uppercase">Evaluated Candidates</p>
-            <p className="font-semibold text-gray-800">{report.evaluated_candidate_count} / {report.total_valid_candidates}</p>
+          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-100">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Evaluated AIS Candidates</p>
+            <p className="text-sm font-bold text-slate-800 mt-0.5">{report.evaluated_candidate_count} <span className="text-xs text-slate-400 font-normal">/ {report.total_valid_candidates} valid</span></p>
           </div>
-          <div className="bg-gray-50 p-3 rounded border border-gray-100">
-            <p className="text-xs text-gray-500 font-medium uppercase">Prior Mode</p>
-            <p className="font-semibold text-gray-800 text-sm truncate" title={report.prior_mode}>{report.prior_mode}</p>
+          <div className="bg-slate-50/80 p-3 rounded-lg border border-slate-100">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Prior Mode</p>
+            <p className="text-xs font-semibold text-slate-700 truncate mt-1" title={report.prior_mode}>{report.prior_mode}</p>
           </div>
         </div>
 
         {report.hypothesis_space_truncated && (
-          <div className="bg-blue-50 text-blue-800 p-3 rounded border border-blue-100 flex items-start gap-2 text-sm mt-2">
-            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="bg-blue-50/80 text-blue-900 p-3 rounded-lg border border-blue-200/60 flex items-start gap-2.5 text-xs mt-3.5">
+            <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
             <p><strong>Hypothesis Space Truncated:</strong> The posterior distribution is conditional on the {report.returned_candidate_count} returned candidates, not the entire physical hypothesis space ({report.total_valid_candidates} total valid).</p>
           </div>
         )}
       </div>
 
       {/* Candidate List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-4 border-b bg-gray-50 flex items-center gap-2">
-          <Ship className="h-5 w-5 text-gray-600" />
-          <h3 className="text-lg font-bold text-gray-800">Candidate Hypotheses</h3>
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/80 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Ship className="h-4 w-4 text-slate-600" />
+            <h3 className="text-sm font-bold text-slate-900">Candidate Vessel Hypotheses</h3>
+          </div>
+          <span className="text-[11px] font-semibold text-slate-500 bg-white px-2.5 py-0.5 rounded-full border border-slate-200">
+            {report.candidates.length} Ranked
+          </span>
         </div>
         
         {report.candidates.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-slate-400 text-xs">
             No valid candidate hypotheses found.
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-slate-100">
             {report.candidates.map((candidate) => (
-              <div key={candidate.candidate_id} className={`p-5 ${candidate.evaluation_status !== 'SUCCESS' ? 'bg-gray-50' : 'bg-white'}`}>
+              <div key={candidate.candidate_id} className={`p-5 transition-colors ${candidate.evaluation_status !== 'SUCCESS' ? 'bg-slate-50/50' : 'bg-white hover:bg-slate-50/30'}`}>
                 
                 {/* Header: MMSI & Identifiers */}
                 <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-4">

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  Shield, ArrowRight, Upload, Satellite, Waves, Scale,
-  Zap, FileText, Radio, Crosshair, Target,
+  Shield, ArrowRight, Upload,
+  Zap, FileText, Crosshair, Target,
 } from 'lucide-react';
 
 interface HeroSectionProps {
@@ -43,9 +43,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate, onOpenUplo
 
         {/* ═══ TOP BADGES ═══ */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 backdrop-blur-sm border border-cyan-500/20 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-semibold uppercase tracking-[0.15em] text-white/90">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#0a192f] border border-blue-800 rounded shadow-md">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.15em] text-blue-100">
               National Maritime Surveillance
             </span>
           </div>
@@ -61,14 +61,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate, onOpenUplo
           <div className="lg:col-span-7 space-y-5">
 
             {/* Hero Heading */}
-            <h1 className="text-3xl sm:text-4xl lg:text-[2.9rem] xl:text-[3.4rem] font-extrabold text-white leading-[1.05] tracking-tight max-w-[800px]">
-              AI-assisted Oil Spill{' '}
-              <br className="hidden sm:block" />
-              Detection and Vessel{' '}
-              <br className="hidden sm:block" />
-              Attribution for{' '}
-              <br className="hidden sm:block" />
-              <span className="hero-heading-gradient">India's Maritime Waters</span>
+            <h1 className="text-3xl sm:text-4xl lg:text-[3rem] xl:text-[3.6rem] font-black text-white tracking-tight max-w-[700px]" style={{ lineHeight: '1.18', letterSpacing: '-0.01em' }}>
+              <span className="block">AI-assisted</span>
+              <span className="block hero-heading-gradient" style={{ lineHeight: '1.22' }}>Oil Spill</span>
+              <span className="block">Detection and</span>
+              <span className="block">Vessel Attribution</span>
             </h1>
 
             {/* Cyan Tagline */}
@@ -76,35 +73,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate, onOpenUplo
               — &nbsp;Cleaner Seas &nbsp;| &nbsp;Safer Coasts &nbsp;| &nbsp;A Greener Tomorrow
             </p>
 
-            {/* ═══ THREE FEATURE CARDS ═══ */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 max-w-[750px]">
-              <div className="glass-card group cursor-pointer !p-3" onClick={() => onNavigate('dashboard')}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <Satellite className="w-4 h-4 text-cyan-400" />
-                  <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-cyan-400 transition-colors" />
-                </div>
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mb-1">Detection Mode</p>
-                <p className="text-[13px] font-bold text-white leading-tight">SAR Sentinel-1 /<br/>Sentinel-2</p>
-              </div>
 
-              <div className="glass-card group cursor-pointer !p-3" onClick={() => onNavigate('dashboard')}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <Waves className="w-4 h-4 text-blue-400" />
-                  <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-blue-400 transition-colors" />
-                </div>
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mb-1">Hydrodynamic Engine</p>
-                <p className="text-[13px] font-bold text-white leading-tight">18h Origin Backtrack</p>
-              </div>
-
-              <div className="glass-card group cursor-pointer !p-3" onClick={() => onNavigate('dashboard')}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <Scale className="w-4 h-4 text-emerald-400" />
-                  <ArrowRight className="w-3 h-3 text-white/30 group-hover:text-emerald-400 transition-colors" />
-                </div>
-                <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mb-1">Attribution Confidence</p>
-                <p className="text-[13px] font-bold text-white leading-tight">Probability Scoring</p>
-              </div>
-            </div>
 
             {/* ═══ CTA BUTTONS ═══ */}
             <div className="flex flex-wrap items-center gap-4 pt-1">
@@ -200,10 +169,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate, onOpenUplo
           </div>
         </div>
 
-        {/* ═══ VESSEL → SPILL CONNECTION MARKER ═══ */}
-        <div className="hidden lg:block absolute bottom-[220px] left-[48%] z-[5] pointer-events-none">
-          <div className="w-3 h-3 rounded-full border-2 border-cyan-400/40 bg-cyan-400/10 animate-ping" />
-        </div>
+
 
       </div>
     </section>

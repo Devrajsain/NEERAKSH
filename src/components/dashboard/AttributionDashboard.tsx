@@ -131,18 +131,6 @@ export const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ spil
 
   return (
     <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
-      {/* Demo Banner */}
-      {isDemoMode && (
-        <div className="bg-amber-50 border border-amber-200/90 text-amber-800 p-4 rounded-xl shadow-xs flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-amber-900">Demo / Synthetic Fixture Mode</p>
-              <p className="text-xs text-amber-700 mt-0.5">This analysis is running on deterministic synthetic test fixtures and should not be used as live legal testimony.</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Header Summary */}
       <div className="bg-white p-5 sm:p-6 rounded-xl shadow-xs border border-slate-200/90">

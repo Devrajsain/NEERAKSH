@@ -318,10 +318,10 @@ export const ForensicAnalyticsModule: React.FC<ForensicAnalyticsModuleProps> = (
 
     // TRACK 3: FISHING VESSEL 7 (Low Likelihood - Purple)
     const fishingTrack: [number, number][] = [
-      [originLat - 0.06, originLng - 0.12],
-      [originLat - 0.07, originLng - 0.08],
-      [originLat - 0.08, originLng - 0.06], // 7.2 km SW
-      [originLat - 0.09, originLng - 0.03],
+      [originLat + 0.12, originLng + 0.08],
+      [originLat + 0.10, originLng + 0.06],
+      [originLat + 0.08, originLng + 0.04], // Northeast
+      [originLat + 0.06, originLng + 0.02],
     ];
     const isFishingSelected = selectedVesselMmsi === '419001234';
     const fishingLine = L.polyline(fishingTrack, {

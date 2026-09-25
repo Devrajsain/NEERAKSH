@@ -1,170 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, X, CheckCircle, AlertTriangle, FileText, Cpu, Compass, Ship, ArrowRight, Play, RefreshCw, Eye, Download, Info, Pencil, Check } from 'lucide-react';
-import { createCase, continueCaseFeature2, CaseResponse, getCase } from '../services/api';
+import re
 
-interface WorkflowUploadModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelectCase: (caseId: string) => void;
-}
+with open('src/components/WorkflowUploadModal.tsx', 'r', encoding='utf-8') as f:
+    content = f.read()
 
+# Replace the imports to include new icons
+content = re.sub(
+    r"import \{ Upload, X, CheckCircle.*\} from 'lucide-react';",
+    "import { Upload, X, CheckCircle, AlertTriangle, FileText, Cpu, Compass, Ship, ArrowRight, Play, RefreshCw, Eye, Download, Info, Pencil, Check } from 'lucide-react';",
+    content
+)
 
-export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen, onClose, onSelectCase }) => {
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
-  const [uploadedCsvFile, setUploadedCsvFile] = useState<File | null>(null);
-  const [uploadedImageName, setUploadedImageName] = useState<string>('');
-  const [uploadedCsvName, setUploadedCsvName] = useState<string>('');
-  const [isTestMode, setIsTestMode] = useState<boolean>(false);
-  const [processedCase, setProcessedCase] = useState<CaseResponse | null>(null);
-  const [pipelineError, setPipelineError] = useState<string | null>(null);
-  const [processingStep, setProcessingStep] = useState<string>('');
+# We will just rewrite the return (...) statement
+return_index = content.find('  return (')
+if return_index == -1:
+    print("Could not find return statement")
+    exit(1)
 
-  // Manual coordinate entry state for images without reliable geospatial metadata
-  const [manualLatitude, setManualLatitude] = useState<string>('');
-  const [manualLongitude, setManualLongitude] = useState<string>('');
-  const [coordValidationError, setCoordValidationError] = useState<string | null>(null);
-
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const csvInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentStep(1);
-      setPipelineError(null);
-      setIsProcessing(false);
-      setProcessingStep('');
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedImageFile(file);
-      setUploadedImageName(file.name);
-      setProcessedCase(null);
-      setManualLatitude('');
-      setManualLongitude('');
-      setCoordValidationError(null);
-    }
-  };
-
-  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setUploadedCsvFile(file);
-      setUploadedCsvName(file.name);
-    }
-  };
-
-  const processCaseState = (caseData: CaseResponse) => {
-    const summary = caseData.summary_json || {};
-    let step = 1;
-    let processingMessage = '';
-    
-    if (caseData.status === 'FAILED') {
-      setPipelineError(summary.error || 'Pipeline execution failed during processing.');
-      setIsProcessing(false);
-      setProcessingStep('');
-      return false; // Should not poll
-    }
-
-    if (caseData.status === 'AWAITING_COORDINATES' || summary.spill?.requires_coordinates) {
-      setIsProcessing(false);
-      setProcessingStep('Awaiting geographic coordinates for Feature 2...');
-      setCurrentStep(2);
-      return false; // Should not poll
-    }
-
-    // Determine the furthest step reached based on data presence
-    if (summary.bayesian_report || summary.vessels || summary.attribution_status === 'COMPLETED') {
-      step = 4;
-      processingMessage = 'Attribution complete';
-    } else if (summary.drift && (summary.drift.status === 'COMPLETED' || summary.drift.status === 'DATA_UNAVAILABLE')) {
-      step = 3;
-      processingMessage = 'Computing Feature 3 / Bayesian attribution...';
-    } else if (summary.spill) {
-      step = 2;
-      processingMessage = 'Computing Feature 2 drift backtracking...';
-    }
-
-    setCurrentStep(step);
-    if (processingMessage) {
-      setProcessingStep(processingMessage);
-    }
-
-    if (caseData.status === 'COMPLETED') {
-      setProcessingStep('Pipeline complete!');
-      setIsProcessing(false);
-      return false; // Should not poll
-    }
-
-    return true; // Should poll (status is PENDING or PROCESSING)
-  };
-
-  const handleRunPipeline = async () => {
-    if (!uploadedImageFile) {
-      setPipelineError('Please select a satellite SAR or optical image file to proceed.');
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingStep('Initializing processing pipeline...');
-
-    // 2-second delay before redirecting to dashboard
-    setTimeout(() => {
-      onSelectCase('demo-case-id');
-      onClose();
-    }, 2000);
-  };
-
-  const handleContinueToFeature2 = async () => {
-    if (!processedCase) return;
-
-    const lat = parseFloat(manualLatitude);
-    const lon = parseFloat(manualLongitude);
-
-    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-      setCoordValidationError('Invalid latitude/longitude.\nPlease enter valid geographic coordinates.');
-      return;
-    }
-
-    setCoordValidationError(null);
-    setIsProcessing(true);
-
-    try {
-      setProcessingStep('Executing Feature 2 drift backtracking...');
-      const updatedCase = await continueCaseFeature2(processedCase.id, lat, lon);
-      setProcessedCase(updatedCase);
-      onSelectCase(updatedCase.id);
-
-      let caseData = updatedCase;
-      let shouldPoll = processCaseState(caseData);
-      
-      while (shouldPoll) {
-        await new Promise(r => setTimeout(r, 2000));
-        caseData = await getCase(processedCase.id);
-        setProcessedCase(caseData);
-        shouldPoll = processCaseState(caseData);
-      }
-    } catch (err: any) {
-      setPipelineError(err.message || 'Failed to execute Feature 2');
-      setIsProcessing(false);
-      setProcessingStep('');
-    }
-  };
-
-  // Extract results from processed case for display
-  const spillResult = processedCase?.summary_json?.spill;
-  const driftResult = processedCase?.summary_json?.drift;
-  const vesselsResult = processedCase?.summary_json?.vessels;
-
-  return (
+new_return_statement = """  return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-navy-900/80 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-[95vw] max-w-7xl max-h-[90vh] overflow-hidden flex flex-col font-sans">
+      <div className="bg-white border border-gray-200 rounded-xl shadow-2xl w-[95vw] max-w-7xl overflow-hidden flex flex-col font-sans">
         
         {/* Modal Top Header */}
         <div className="bg-[#0B2545] text-white px-6 py-4 flex items-center justify-between">
@@ -455,3 +309,8 @@ export const WorkflowUploadModal: React.FC<WorkflowUploadModalProps> = ({ isOpen
     </div>
   );
 };
+"""
+content = content[:return_index] + new_return_statement
+
+with open('src/components/WorkflowUploadModal.tsx', 'w', encoding='utf-8') as f:
+    f.write(content)

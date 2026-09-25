@@ -505,12 +505,12 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           [22.160, 68.680],
           [22.165, 68.735], // closest approach
         ],
-        // Rank 3 (FISHING VESSEL 7): Approach from Southeast coastal channel
+        // Rank 3 (FISHING VESSEL 7): Approach from Northeast
         [
-          [22.030, 68.980], // Farthest in open channel (~25 km SE of spill)
-          [22.065, 68.945],
-          [22.100, 68.905],
-          [22.135, 68.865], // closest approach
+          [22.350, 68.850], // Farthest in open sea (~25 km NE of spill)
+          [22.300, 68.830],
+          [22.250, 68.810],
+          [22.200, 68.790], // closest approach
         ],
       ];
 

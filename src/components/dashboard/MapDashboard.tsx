@@ -395,80 +395,89 @@ export const MapDashboard: React.FC<MapDashboardProps> = ({ onNavigate, onOpenUp
             selectedEntity={selectedEntity}
             onSelectEntity={handleSelectEntity}
             isLoading={isLoading}
+            detailsPanelOpen={
+              !showAttributionDashboard &&
+              (selectedEntity.type === 'origin' || selectedEntity.type === 'spill')
+            }
           />
 
-          {/* Top-Left: Map Layers + Floating Legend */}
-          <div className="absolute top-4 left-4 z-20 flex flex-col gap-2 pointer-events-auto transition-all duration-300" style={{ width: 175 }}>
-            <LayerControl showLayers={showLayers} setShowLayers={setShowLayers} layers={layers} setLayers={setLayers} />
+          {/* ── LEFT ROW: DetailsPanel (origin/spill) + Layer controls/legend ── */}
+          <div className="absolute top-0 left-0 bottom-0 z-30 flex flex-row pointer-events-none">
+            {/* DetailsPanel slides in from left — pushes the controls/legend right */}
+            {data && !showAttributionDashboard && (selectedEntity.type === 'origin' || selectedEntity.type === 'spill') && (
+              <div className="pointer-events-auto flex-shrink-0">
+                <DetailsPanel
+                  selectedEntity={selectedEntity}
+                  currentData={data}
+                  onGenerateReport={() => {}}
+                  onClose={() => handleSelectEntity({ type: null, id: null })}
+                />
+              </div>
+            )}
 
-            {/* Floating Legend */}
-            <div className="bg-[#0a1426]/90 backdrop-blur-sm border border-slate-700/60 rounded-lg p-2.5 text-white shadow-2xl space-y-1.5 select-none w-full">
-              <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
-                <div className="w-4 flex items-center justify-center flex-shrink-0">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-600 border border-white shadow-sm" />
+            {/* Top-Left: Map Layers + Floating Legend — shifts right when panel open */}
+            <div className="flex flex-col gap-2 pointer-events-auto mt-4 ml-4 transition-all duration-300" style={{ width: 175 }}>
+              <LayerControl showLayers={showLayers} setShowLayers={setShowLayers} layers={layers} setLayers={setLayers} />
+
+              {/* Floating Legend */}
+              <div className="bg-[#0a1426]/90 backdrop-blur-sm border border-slate-700/60 rounded-lg p-2.5 text-white shadow-2xl space-y-1.5 select-none w-full">
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
+                  <div className="w-4 flex items-center justify-center flex-shrink-0">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-600 border border-white shadow-sm" />
+                  </div>
+                  <span>Detected Spill</span>
                 </div>
-                <span>Detected Spill</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
-                <div className="w-4 flex items-center justify-center flex-shrink-0">
-                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500 border border-white shadow-sm" />
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
+                  <div className="w-4 flex items-center justify-center flex-shrink-0">
+                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500 border border-white shadow-sm" />
+                  </div>
+                  <span>Origin Point</span>
                 </div>
-                <span>Origin Point</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
-                <div className="w-4 flex items-center justify-center flex-shrink-0 relative">
-                  <div className="w-full border-t-2 border-dashed border-sky-500" />
-                  <svg className="absolute left-1/2 -top-1 -translate-x-1/2" width="7" height="7" viewBox="0 0 10 10">
-                    <polygon points="5,0.5 9,8.5 5,6.5 1,8.5" fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" transform="rotate(-90 5 5)" />
-                  </svg>
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
+                  <div className="w-4 flex items-center justify-center flex-shrink-0 relative">
+                    <div className="w-full border-t-2 border-dashed border-sky-500" />
+                    <svg className="absolute left-1/2 -top-1 -translate-x-1/2" width="7" height="7" viewBox="0 0 10 10">
+                      <polygon points="5,0.5 9,8.5 5,6.5 1,8.5" fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" transform="rotate(-90 5 5)" />
+                    </svg>
+                  </div>
+                  <span>Hindcast Track (Origin)</span>
                 </div>
-                <span>Hindcast Track (Origin)</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
-                <div className="w-4 flex items-center justify-center flex-shrink-0 relative">
-                  <div className="w-full border-t-2 border-dashed border-sky-500" />
-                  <svg className="absolute left-1/2 -top-1 -translate-x-1/2" width="7" height="7" viewBox="0 0 10 10">
-                    <polygon points="5,0.5 9,8.5 5,6.5 1,8.5" fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" transform="rotate(90 5 5)" />
-                  </svg>
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
+                  <div className="w-4 flex items-center justify-center flex-shrink-0 relative">
+                    <div className="w-full border-t-2 border-dashed border-sky-500" />
+                    <svg className="absolute left-1/2 -top-1 -translate-x-1/2" width="7" height="7" viewBox="0 0 10 10">
+                      <polygon points="5,0.5 9,8.5 5,6.5 1,8.5" fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" transform="rotate(90 5 5)" />
+                    </svg>
+                  </div>
+                  <span>Forecast Track</span>
                 </div>
-                <span>Forecast Track</span>
-              </div>
-              <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
-                <div className="w-4 flex items-center justify-center flex-shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-sky-600 border border-white shadow-sm" />
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-200">
+                  <div className="w-4 flex items-center justify-center flex-shrink-0">
+                    <div className="w-2 h-2 rounded-full bg-sky-600 border border-white shadow-sm" />
+                  </div>
+                  <span>Forecast Points</span>
                 </div>
-                <span>Forecast Points</span>
               </div>
             </div>
           </div>
 
-          {/* Right-side context panel for spill/origin */}
-          {data && !showAttributionDashboard && (selectedEntity.type === 'origin' || selectedEntity.type === 'spill') && (
-            <DetailsPanel
-              selectedEntity={selectedEntity}
-              currentData={data}
-              onGenerateReport={() => {}}
-              onClose={() => handleSelectEntity({ type: null, id: null })}
-            />
-          )}
-
-          {/* Vessel Detail Panel */}
-          {!showAttributionDashboard && selectedEntity.type === 'vessel' && selectedVesselObj && (
-            <VesselPopup
-              vessel={selectedVesselObj}
-              vesselIndex={selectedVesselIdx}
-              onClose={() => handleSelectEntity({ type: null, id: null })}
-              onAuditEvidence={(raw) => { setExplainVessel(raw); setShowExplainModal(true); }}
-            />
-          )}
-
-          {/* Right vessel list */}
+          {/* ── RIGHT COLUMN: Vessel list stacked above vessel detail popup ── */}
           {data && data.vessels.length > 0 && !showAttributionDashboard && (
-            <RightVesselList
-              vessels={data.vessels}
-              onSelectVessel={(id) => handleSelectEntity({ type: 'vessel', id })}
-              selectedVesselMmsi={selectedEntity.type === 'vessel' ? selectedEntity.id : null}
-            />
+            <div className="absolute top-4 right-4 z-[400] w-64 flex flex-col gap-2 pointer-events-auto">
+              <RightVesselList
+                vessels={data.vessels}
+                onSelectVessel={(id) => handleSelectEntity({ type: 'vessel', id })}
+                selectedVesselMmsi={selectedEntity.type === 'vessel' ? selectedEntity.id : null}
+              />
+              {selectedEntity.type === 'vessel' && selectedVesselObj && (
+                <VesselPopup
+                  vessel={selectedVesselObj}
+                  vesselIndex={selectedVesselIdx}
+                  onClose={() => handleSelectEntity({ type: null, id: null })}
+                  onAuditEvidence={(raw) => { setExplainVessel(raw); setShowExplainModal(true); }}
+                />
+              )}
+            </div>
           )}
 
           {/* Bayesian unavailable banner */}

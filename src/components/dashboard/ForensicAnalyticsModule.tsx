@@ -810,61 +810,182 @@ export const ForensicAnalyticsModule: React.FC<ForensicAnalyticsModuleProps> = (
 
       {/* ── MODAL: GENERATE FINAL REPORT ── */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200 print:bg-white print:p-0">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-full max-h-[90vh] flex flex-col print:h-auto print:max-h-none print:shadow-none print:border-none overflow-hidden">
+            
+            {/* Modal Header (Hidden in print) */}
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50 print:hidden shrink-0">
               <div>
-                <h3 className="text-base font-black text-navy-800">Maritime Intelligence Forensic Dossier</h3>
-                <span className="text-xs text-slate-500">Case SLK-A58D • Final Verdict</span>
+                <h3 className="text-lg font-black text-navy-800">Official Forensic Report</h3>
+                <span className="text-xs text-slate-500 font-mono">Case ID: SLK-A58D</span>
               </div>
-              <button 
-                onClick={() => setShowReportModal(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-xl space-y-3 text-xs text-slate-700 font-mono">
-              <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                <span>PRIMARY TARGET VESSEL:</span>
-                <strong className="text-red-600">MT OCEAN VOYAGER (MMSI: 538006789)</strong>
-              </div>
-              <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                <span>ATTRIBUTION CONFIDENCE:</span>
-                <strong className="text-navy-800">78% (BAYESIAN POSTERIOR)</strong>
-              </div>
-              <div className="flex justify-between border-b border-slate-200 pb-1.5">
-                <span>DISCHARGE ORIGIN:</span>
-                <strong>04:12 UTC @ 22.470°N, 69.210°E</strong>
-              </div>
-              <div className="flex justify-between">
-                <span>MULTI-DOMAIN EVIDENCE:</span>
-                <strong className="text-emerald-700">SAR + HINDCAST + AIS + METOCEAN (4/4 PASS)</strong>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => window.print()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  Download PDF
+                </button>
+                <button 
+                  onClick={() => setShowReportModal(false)}
+                  className="px-4 py-2 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  Close
+                </button>
               </div>
             </div>
 
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Official report generated and timestamped. Ready for transmission to Indian Coast Guard, DG Shipping, and legal counsel for maritime enforcement proceedings.
-            </p>
+            {/* Scrollable Report Content */}
+            <div className="p-8 sm:p-12 overflow-y-auto print:overflow-visible print:p-8 flex-1 text-sm text-slate-800 font-serif leading-relaxed" id="printable-report">
+              
+              {/* Report Header */}
+              <div className="border-b-2 border-slate-800 pb-6 mb-8 text-center">
+                <h1 className="text-3xl font-black uppercase tracking-widest text-slate-900 mb-2">Maritime Incident Forensic Report</h1>
+                <p className="text-sm uppercase tracking-wider text-slate-500 font-bold mb-4">Confidential • For Official Use Only</p>
+                <div className="flex justify-center gap-8 text-xs font-mono font-bold text-slate-600">
+                  <span>CASE ID: SLK-A58D</span>
+                  <span>DATE: {new Date().toLocaleDateString()}</span>
+                  <span>AGENCY: COASTAL SURVEILLANCE AUTHORITY</span>
+                </div>
+              </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                onClick={() => setShowReportModal(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-xs font-bold"
-              >
-                Close
-              </button>
-              <button
-                onClick={() => {
-                  alert('Final Report generated and downloaded as PDF!');
-                  setShowReportModal(false);
-                }}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Official PDF</span>
-              </button>
+              {/* 1. Executive Summary */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold uppercase tracking-wider border-b border-slate-300 pb-1 mb-3 text-slate-900">1. Executive Incident Summary</h2>
+                <p className="text-justify">
+                  On {new Date().toLocaleDateString()}, a significant maritime oil spill was detected in the Arabian Sea off the Gujarat coast via Sentinel-1 Synthetic Aperture Radar (SAR). Multi-domain forensic analysis, incorporating reverse Lagrangian drift modeling, meteorological data (INCOIS/ECMWF), and historical AIS telemetry, successfully isolated a single primary discharge event. The attribution model identified the crude oil tanker <strong>MT OCEAN VOYAGER (MMSI: 538006789)</strong> as the highest probability suspect with a <strong>78% Bayesian posterior confidence match</strong>. This dossier compiles all analytical evidence supporting this conclusion for regulatory enforcement.
+                </p>
+              </div>
+
+              {/* 2. Spill Detection Summary */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold uppercase tracking-wider border-b border-slate-300 pb-1 mb-3 text-slate-900">2. Spill Detection Details</h2>
+                <table className="w-full border-collapse border border-slate-300 text-sm mb-4">
+                  <tbody>
+                    <tr>
+                      <td className="border border-slate-300 p-2.5 font-bold bg-slate-50 w-1/3">Detection Timestamp</td>
+                      <td className="border border-slate-300 p-2.5 font-mono">04:35 UTC</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-300 p-2.5 font-bold bg-slate-50">Centroid Location</td>
+                      <td className="border border-slate-300 p-2.5 font-mono">22.515°N, 69.130°E</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-300 p-2.5 font-bold bg-slate-50">Estimated Area</td>
+                      <td className="border border-slate-300 p-2.5">284 km²</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-300 p-2.5 font-bold bg-slate-50">Slick Geometry</td>
+                      <td className="border border-slate-300 p-2.5">Linear, elongated plume indicative of underway discharge; heavily fragmented edges suggesting aging &gt;2 hours.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 3. Drift Modeling & Origin */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold uppercase tracking-wider border-b border-slate-300 pb-1 mb-3 text-slate-900">3. Drift Modeling &amp; Discharge Origin</h2>
+                <p className="mb-3 text-justify">
+                  Using stochastic Lagrangian particle tracking driven by regional HYCOM currents and ECMWF winds, the slick's trajectory was hindcasted to isolate the precise temporal and spatial inception point of the discharge.
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 mb-3 text-justify">
+                  <li><strong>Reconstructed Origin Coordinates:</strong> 22.470°N, 69.210°E</li>
+                  <li><strong>Estimated Discharge Window:</strong> 04:00 - 04:25 UTC (Peak: 04:12 UTC)</li>
+                  <li><strong>Forecasting (48h):</strong> Forward projection indicates coastal impact risk is LOW; plume will disperse into open waters tracking northwest.</li>
+                </ul>
+              </div>
+
+              {/* Page Break for Print */}
+              <div className="print:break-before-page pt-4 print:pt-0"></div>
+
+              {/* 4. Metocean Conditions */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold uppercase tracking-wider border-b border-slate-300 pb-1 mb-3 text-slate-900">4. Metocean Conditions (T=0)</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="border border-slate-300 p-3 bg-slate-50">
+                    <strong className="block text-xs uppercase text-slate-500 mb-1">Wind Vector</strong>
+                    <span className="font-mono font-bold text-slate-900">14 kn NW (Leeway: 3.2%)</span>
+                  </div>
+                  <div className="border border-slate-300 p-3 bg-slate-50">
+                    <strong className="block text-xs uppercase text-slate-500 mb-1">Ocean Current</strong>
+                    <span className="font-mono font-bold text-slate-900">0.82 m/s heading 138° SE</span>
+                  </div>
+                  <div className="border border-slate-300 p-3 bg-slate-50">
+                    <strong className="block text-xs uppercase text-slate-500 mb-1">Sea State</strong>
+                    <span className="font-mono font-bold text-slate-900">Beaufort 4 (Wave H: 1.4m)</span>
+                  </div>
+                  <div className="border border-slate-300 p-3 bg-slate-50">
+                    <strong className="block text-xs uppercase text-slate-500 mb-1">Sea Surface Temp</strong>
+                    <span className="font-mono font-bold text-slate-900">29.0°C (High evaporation)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 5. Vessel Attribution */}
+              <div className="mb-8">
+                <h2 className="text-lg font-bold uppercase tracking-wider border-b border-slate-300 pb-1 mb-3 text-slate-900">5. Vessel Attribution &amp; Evidence</h2>
+                <p className="mb-3 text-justify">
+                  Analysis of 12,487 regional AIS records filtered against the reconstructed spatial-temporal origin cylinder identified 3 candidate vessels. A multi-factor Bayesian weighting model was applied.
+                </p>
+                <div className="border-l-4 border-slate-800 pl-4 py-3 bg-slate-100 mb-4 print:bg-transparent print:border-black">
+                  <h3 className="font-black text-slate-900 text-base">PRIMARY SUSPECT: MT OCEAN VOYAGER</h3>
+                  <p className="text-xs font-mono text-slate-700">MMSI: 538006789 • Flag: Panama • Type: Crude Oil Tanker</p>
+                  <p className="text-sm font-bold text-slate-900 mt-2">Overall Match Confidence: 78%</p>
+                </div>
+                
+                <h4 className="font-bold text-sm mb-2 text-slate-800">Key Forensic Evidence (MT OCEAN VOYAGER):</h4>
+                <ul className="list-disc pl-5 space-y-2 mb-4 text-justify">
+                  <li><strong>Spatial Alignment:</strong> Intersected the exact reconstructed origin coordinate (22.470°N, 69.210°E) at 04:09 UTC, within 3 minutes of the modeled peak discharge time.</li>
+                  <li><strong>Kinematic Anomaly (Speed):</strong> Speed abruptly dropped from a cruising baseline of 12.6 kn to 3.2 kn during the transit of the spill zone, highly indicative of de-ballasting or illicit pumping operations.</li>
+                  <li><strong>Kinematic Anomaly (Course):</strong> Executed an unexplained 18° zig-zag maneuver resulting in a 41-minute loitering window at the exact slick origin point.</li>
+                  <li><strong>Capacity Matrix:</strong> Vessel DWT (318,000) aligns with the volumetric scale required to produce a 284 km² slick.</li>
+                </ul>
+              </div>
+
+              {/* 6. Sources & Verification */}
+              <div className="mb-12">
+                <h2 className="text-lg font-bold uppercase tracking-wider border-b border-slate-300 pb-1 mb-3 text-slate-900">6. Evidence Sources &amp; Verification</h2>
+                <table className="w-full text-xs border border-slate-300">
+                  <thead className="bg-slate-100 font-bold uppercase text-slate-600">
+                    <tr>
+                      <th className="p-2 border border-slate-300 text-left">Data Domain</th>
+                      <th className="p-2 border border-slate-300 text-left">Source Provider</th>
+                      <th className="p-2 border border-slate-300 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="p-2 border border-slate-300">Satellite SAR Imagery</td>
+                      <td className="p-2 border border-slate-300 font-mono">Copernicus Sentinel-1 (C-Band)</td>
+                      <td className="p-2 border border-slate-300 text-center font-bold text-slate-800">VERIFIED</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 border border-slate-300">AIS Telemetry</td>
+                      <td className="p-2 border border-slate-300 font-mono">Spire Global / ExactEarth</td>
+                      <td className="p-2 border border-slate-300 text-center font-bold text-slate-800">VERIFIED</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2 border border-slate-300">Metocean/Currents</td>
+                      <td className="p-2 border border-slate-300 font-mono">INCOIS / HYCOM / ECMWF</td>
+                      <td className="p-2 border border-slate-300 text-center font-bold text-slate-800">VERIFIED</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer Signatures */}
+              <div className="mt-8 pt-8 border-t-2 border-slate-800 flex justify-between px-4 sm:px-8">
+                <div className="text-center">
+                  <div className="w-40 sm:w-48 border-b border-slate-400 mb-2"></div>
+                  <span className="text-[10px] sm:text-xs uppercase font-bold text-slate-600">Lead Forensic Analyst</span>
+                </div>
+                <div className="text-center">
+                  <div className="w-40 sm:w-48 border-b border-slate-400 mb-2"></div>
+                  <span className="text-[10px] sm:text-xs uppercase font-bold text-slate-600">System generated (SLK-A58D)</span>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

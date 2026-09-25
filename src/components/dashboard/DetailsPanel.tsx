@@ -14,7 +14,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ selectedEntity, curr
   if (!isVisible) return null;
 
   return (
-    <aside className="absolute left-0 top-0 bottom-0 z-30 w-80 context-panel slide-in-left flex flex-col">
+    <aside className="h-full z-30 w-80 context-panel slide-in-left flex flex-col flex-shrink-0">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-slate-50">
         <div className="flex items-center gap-2">

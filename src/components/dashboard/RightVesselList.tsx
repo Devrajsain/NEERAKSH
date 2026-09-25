@@ -18,7 +18,7 @@ export const RightVesselList: React.FC<RightVesselListProps> = ({ vessels, onSel
   if (vessels.length === 0) return null;
 
   return (
-    <aside className={`absolute top-4 right-4 z-[400] w-64 flex flex-col pointer-events-auto vessel-list-panel rounded-lg overflow-hidden transition-all duration-300`}>
+    <aside className={`w-full flex flex-col pointer-events-auto vessel-list-panel rounded-lg overflow-hidden transition-all duration-300`}>
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 py-2 bg-navy-800 text-white cursor-pointer select-none"

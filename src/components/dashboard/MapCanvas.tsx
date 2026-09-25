@@ -11,6 +11,8 @@ interface MapCanvasProps {
   onSelectEntity: (entity: DashboardEntityState) => void;
   isLoading: boolean;
   onToggleLayers?: () => void;
+  /** When true (DetailsPanel open), the GIS scale bar shifts right to avoid being hidden */
+  detailsPanelOpen?: boolean;
 }
 
 export const MapCanvas: React.FC<MapCanvasProps> = ({
@@ -20,6 +22,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   onSelectEntity,
   isLoading,
   onToggleLayers,
+  detailsPanelOpen = false,
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<L.Map | null>(null);
@@ -53,6 +56,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.35 0" in="noise" result="coloredNoise" />
           <feComposite operator="in" in="coloredNoise" in2="SourceGraphic" result="composite" />
           <feBlend mode="multiply" in="composite" in2="SourceGraphic" />
+        </filter>
+        <filter id="jagged-edge" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="4" result="turbulence" />
+          <feDisplacementMap in="SourceGraphic" in2="turbulence" scale="30" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       `;
       document.body.appendChild(svg);
@@ -230,8 +237,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
 
       mapLayersGroup.current = L.layerGroup().addTo(map);
 
-      // Deselect when clicking empty water
-      map.on('click', () => onSelectEntity({ type: null, id: null }));
+      // NOTE: Panels are persistent — they only close via their own X button.
+      // Map background clicks do NOT deselect to prevent accidental panel closure.
 
       map.on('move', () => {
         updateScaleBar();
@@ -316,23 +323,25 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     // 1. DETECTED OIL SPILL AREA — Light Transparent Red Area
     // ══════════════════════════════════════════════════════
     let spillCoords: [number, number][] = [];
-    if (poly && poly.length >= 3) {
-      spillCoords = poly.map((p: number[]) => [p[0], p[1]] as [number, number]);
-    } else {
-      // Generate an organic slick footprint centered around [cx, cy]
-      const numPts = 14;
-      const rx = 0.045; // ~5 km radius
-      const ry = 0.024; // ~2.6 km radius
-      const rot = driftAngleRad;
-      for (let i = 0; i < numPts; i++) {
-        const theta = (i / numPts) * 2 * Math.PI;
-        const wobble = 0.85 + Math.sin(theta * 3) * 0.15 + Math.cos(theta * 2) * 0.08;
-        const ex = Math.cos(theta) * rx * wobble;
-        const ey = Math.sin(theta) * ry * wobble;
-        const px = ex * Math.cos(rot) - ey * Math.sin(rot);
-        const py = ex * Math.sin(rot) + ey * Math.cos(rot);
-        spillCoords.push([cx + px, cy + py]);
-      }
+    
+    // Always generate a highly detailed, fixed, jagged footprint so it doesn't change on zoom
+    const numPts = 120;
+    const rx = 0.015; // Small, ~1.5 km radius
+    const ry = 0.008; // Small, ~0.8 km radius
+    const rot = driftAngleRad;
+    for (let i = 0; i < numPts; i++) {
+      const theta = (i / numPts) * 2 * Math.PI;
+      // Base wobble + high frequency deterministic noise
+      let wobble = 0.85 + Math.sin(theta * 3) * 0.15 + Math.cos(theta * 2) * 0.08;
+      wobble += Math.sin(theta * 14) * 0.08;
+      wobble += Math.cos(theta * 25) * 0.06;
+      wobble += Math.sin(theta * 43) * 0.04;
+      
+      const ex = Math.cos(theta) * rx * wobble;
+      const ey = Math.sin(theta) * ry * wobble;
+      const px = ex * Math.cos(rot) - ey * Math.sin(rot);
+      const py = ex * Math.sin(rot) + ey * Math.cos(rot);
+      spillCoords.push([cx + px, cy + py]);
     }
 
     // Dynamic camera centering & bounds fitting accumulator
@@ -351,16 +360,16 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         weight: 1.5,
         opacity: 0.85,
         fillColor: '#ef4444',
-        fillOpacity: 0.22, // Light transparent red area
+        fillOpacity: 0.5, // Natural spread
         pane: 'spillPane',
         className: 'gis-detected-spill-polygon',
       });
 
       spillPolygon.on('mouseover', () => {
-        spillPolygon.setStyle({ fillOpacity: 0.35, weight: 2.2 });
+        spillPolygon.setStyle({ fillOpacity: 0.6, weight: 2.2 });
       });
       spillPolygon.on('mouseout', () => {
-        spillPolygon.setStyle({ fillOpacity: 0.22, weight: 1.5 });
+        spillPolygon.setStyle({ fillOpacity: 0.5, weight: 1.5 });
       });
       spillPolygon.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
@@ -883,10 +892,10 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
           pLat = fcObj.centroid_latitude;
           pLng = fcObj.centroid_longitude;
         } else {
-          // Dynamic interpolation along drift vector
+          // Dynamic interpolation along drift vector starting directly from the detection point
           const stepMultiplier = [1, 1.8, 3.2, 5.0][idx];
-          pLat = origLat + dLat * (0.4 + stepMultiplier * 0.35);
-          pLng = origLng + dLng * (0.4 + stepMultiplier * 0.35);
+          pLat = cx + dLat * (stepMultiplier * 0.15);
+          pLng = cy + dLng * (stepMultiplier * 0.15);
         }
 
         fcCoords.push({ key: hKey, lat: pLat, lng: pLng });
@@ -1080,8 +1089,11 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         </div>
       </div>
 
-      {/* ── 4. Professional GIS Scale Bar (Bottom-Left) ── */}
-      <div className="absolute bottom-4 left-6 z-[400] pointer-events-auto select-none font-mono transition-all duration-300">
+      {/* ── 4. Professional GIS Scale Bar (Bottom-Left) — shifts right when DetailsPanel open ── */}
+      <div
+        className="absolute bottom-4 z-[400] pointer-events-auto select-none font-mono transition-all duration-300"
+        style={{ left: detailsPanelOpen ? '344px' : '24px' }}
+      >
         <div
           className="flex justify-between text-[10px] font-bold text-white mb-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
           style={{ width: `${scaleInfo.widthPx}px` }}

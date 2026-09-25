@@ -19,7 +19,7 @@ export const VesselPopup: React.FC<VesselPopupProps> = ({ vessel, vesselIndex = 
   const ev = vessel.evidence || {};
 
   return (
-    <aside className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-[420px] max-h-[85vh] context-panel flex flex-col rounded-xl overflow-hidden shadow-2xl border border-slate-200">
+    <aside className="w-full max-h-[calc(60vh)] context-panel vessel-popup-panel flex flex-col rounded-xl overflow-hidden shadow-2xl border border-slate-200">
       {/* Header */}
       <div className="bg-navy-800 text-white px-4 py-3 flex items-start justify-between">
         <div>

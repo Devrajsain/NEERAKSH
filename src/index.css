@@ -9,6 +9,23 @@
   }
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-report, #printable-report * {
+    visibility: visible;
+  }
+  #printable-report {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+}
+
 /* ═══ LEAFLET ═══ */
 .leaflet-container {
   font-family: 'Inter', sans-serif !important;
@@ -107,6 +124,11 @@
 .context-panel {
   background: #fff; border-left: 1px solid #e2e5ea;
   box-shadow: -4px 0 24px rgba(0,0,0,0.08);
+}
+/* Vessel popup is a stacked card, not a left-edge drawer */
+.vessel-popup-panel {
+  border-left: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
 .detail-row {
   display: flex; justify-content: space-between; align-items: center;
@@ -336,10 +358,40 @@
 /* ═══ HERO (preserved) ═══ */
 .hero-section { position: relative; background-color: #04101f; min-height: 100vh; }
 .hero-video {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  object-fit: cover; z-index: 1; pointer-events: none; user-select: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  z-index: 1;
+  pointer-events: none;
+  user-select: none;
 }
-.hero-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(4, 16, 31, 0.70) 0%,
+    rgba(4, 16, 31, 0.35) 45%,
+    rgba(4, 16, 31, 0.05) 100%
+  ),
+  linear-gradient(
+    180deg,
+    rgba(4, 16, 31, 0.40) 0%,
+    transparent 20%,
+    transparent 80%,
+    #04101f 100%
+  );
+}
 .hero-heading-gradient {
   background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 40%, #0ea5e9 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
